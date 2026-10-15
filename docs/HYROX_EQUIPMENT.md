@@ -65,6 +65,8 @@ Excluded: heavy farmer's carries.
 | Good | Straight-arm pulldowns | `cable_machine` (or band) |
 | Fallback | Rower intervals at matched effort | `rower` |
 
+Context rule (PO, 2026-10-15): in race-specific sessions (compromised runs, simulations) the rower is recommended first, because the SkiErg station is a conditioning demand; pulldowns are used there only if no rower is available. In strength sessions, pulldowns are recommended first.
+
 Excluded: bike erg intervals.
 
 ### Rowing
