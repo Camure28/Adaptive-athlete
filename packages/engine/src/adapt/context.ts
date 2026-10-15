@@ -68,6 +68,11 @@ export const EXPECTED_SESSION_RPE: Record<SessionType, { min: number; max: numbe
   strength: { min: 5, max: 7 },
   cross_train: { min: 2, max: 4 },
   race: { min: 9, max: 10 },
+  race_pace_intervals: { min: 7, max: 8 },
+  compromised_run: { min: 7, max: 8 },
+  station_endurance: { min: 5, max: 7 },
+  half_simulation: { min: 7, max: 8 },
+  full_simulation: { min: 8, max: 9 },
 };
 
 export interface Compliance {

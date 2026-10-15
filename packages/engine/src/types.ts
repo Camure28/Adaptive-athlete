@@ -143,7 +143,7 @@ export interface IntensityTarget {
   heartRate?: { min: number; max: number };
 }
 
-export type StepKind = "warmup" | "work" | "recovery" | "cooldown" | "steady";
+export type StepKind = "warmup" | "work" | "recovery" | "cooldown" | "steady" | "station";
 
 export interface WorkoutStep {
   kind: StepKind;
@@ -155,7 +155,42 @@ export interface WorkoutStep {
   repeat?: number;
   /** Recovery performed between repeats (N − 1 times). */
   recoveryBetween?: { durationSeconds: number; target: IntensityTarget; note?: string };
+  /** Present on `station` steps: what to do at the station, with equipment-aware options. */
+  station?: StationPrescription;
   note?: string;
+}
+
+export type HyroxStation =
+  | "skierg"
+  | "sled_push"
+  | "sled_pull"
+  | "burpee_broad_jump"
+  | "row"
+  | "farmers_carry"
+  | "sandbag_lunges"
+  | "wall_balls";
+
+export interface StationOption {
+  id: string;
+  name: string;
+  /** "real" = the actual race station. */
+  kind: "real" | "specific" | "support";
+  rating: "race" | "best" | "good" | "fallback";
+}
+
+export interface StationPrescription {
+  station: HyroxStation;
+  /** Work for this block, e.g. "500 m", "25 m", "50 reps". */
+  volume: string;
+  /** Load guidance for the real station, from the rulebook for the athlete's division. */
+  raceLoad?: string;
+  /** Load for this block when it differs from race load (e.g. lighter for first-timers). */
+  load?: string;
+  recommended: StationOption | null;
+  /** Other options the athlete has equipment for, best first. */
+  alternatives: StationOption[];
+  /** Set when nothing the athlete has can train this station. */
+  unavailableNote?: string;
 }
 
 export type SessionType =
@@ -169,13 +204,22 @@ export type SessionType =
   | "strides"
   | "strength"
   | "cross_train"
-  | "race";
+  | "race"
+  | "race_pace_intervals"
+  | "compromised_run"
+  | "station_endurance"
+  | "half_simulation"
+  | "full_simulation";
 
 export const HARD_SESSION_TYPES: ReadonlySet<SessionType> = new Set<SessionType>([
   "threshold",
   "intervals",
   "marathon_pace",
   "race",
+  "race_pace_intervals",
+  "compromised_run",
+  "half_simulation",
+  "full_simulation",
 ]);
 
 export interface PlannedWorkout {
@@ -209,10 +253,21 @@ export interface PlanWeek {
   workouts: PlannedWorkout[];
 }
 
+/** A HYROX Singles race goal. Division and sex set the station loads. */
+export interface HyroxGoal {
+  id: string;
+  kind: "hyrox";
+  date: IsoDate;
+  division: "open" | "pro";
+  sex: "women" | "men";
+  targetFinishSeconds?: number;
+  priority: "A" | "B" | "C";
+}
+
 export interface TrainingPlan {
   id: string;
   athleteId: string;
-  goal: GoalEvent;
+  goal: GoalEvent | HyroxGoal;
   createdAt: IsoInstant;
   /** Monotonic; each adaptation produces a new version, prior versions are retained. */
   version: number;

@@ -9,3 +9,7 @@ export { adaptPlan, type AdaptationResult } from "./adapt/engine.js";
 export { DEFAULT_RULES, type Rule } from "./adapt/rules.js";
 export type { AdaptationInput } from "./adapt/context.js";
 export { llmSafeContext } from "./explain/llm-context.js";
+export * from "./hyrox/rulebook.js";
+export * from "./hyrox/equipment.js";
+export * from "./hyrox/config.js";
+export { generateHyroxPlan, HyroxPlanError, type HyroxAthlete } from "./hyrox/generator.js";
