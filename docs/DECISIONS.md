@@ -14,9 +14,9 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Status:** Accepted.
 
 ## D-003 — Equipment checklist drives programming (2026-10-15)
-**Decision:** Athletes first choose a setup type (Gym, Home, or Both), then tick the equipment they can access. The plan uses the real station where available, otherwise the first substitution in a coach-ordered list whose equipment is ticked. Race-specific substitutes are used in HYROX-specific sessions; strength-support substitutes go in strength sessions. Athletes can change the checklist at any time.
+**Decision:** Athletes first choose a setup type (Home, CrossFit gym, Commercial gym, HYROX Training Club, or a combination). Each gym type pre-ticks its typical equipment; the athlete corrects the checklist. The plan uses the real station where available. Otherwise it recommends the highest coach-ranked substitute the athlete has equipment for, while still showing the other available options for the athlete to choose; the choice is logged. Race-specific substitutes are used in HYROX-specific sessions; strength-support substitutes go in strength sessions. Athletes can change the checklist at any time.
 **Why:** Most gyms are not fully HYROX-equipped; a plan that assumes a sled the athlete doesn't have is unusable.
-**Status:** Accepted. Sled push/pull substitutions provided by product owner. Catalog in `docs/HYROX_EQUIPMENT.md`; other stations still in draft.
+**Status:** Accepted. All substitutions approved by product owner. Open: coach stimulus rankings; preset contents. Catalog in `docs/HYROX_EQUIPMENT.md`.
 
 ## D-004 — All athlete levels supported (2026-10-15)
 **Decision:** Plans support first-timers through competitive athletes. Level adjusts volume, intensity, number of hard sessions, and station progression.

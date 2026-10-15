@@ -1,12 +1,12 @@
 # HYROX Equipment & Station Substitutions
 
-Status: working draft, 2026-10-15. Items marked **(PO)** came from the product owner (coach); items marked **(draft)** are Claude's proposals awaiting review.
+Status: approved by product owner 2026-10-15. Coach stimulus rankings and gym-type presets still to be finalised.
 
 ## How it works
 
-1. **Setup type first:** the athlete picks *Gym*, *Home*, or *Both*.
-2. **Checklist:** the athlete ticks the equipment they can access. They can change it at any time; the plan updates its substitutions.
-3. **Substitution order:** for each station, options are listed in preference order. The engine uses the real station if available, otherwise the first option whose required equipment is ticked.
+1. **Setup type first:** the athlete picks *Home*, *CrossFit gym*, *Commercial gym*, *HYROX Training Club*, or a combination.
+2. **Pre-ticked checklist:** each gym type pre-ticks its typical equipment (see Presets). The athlete corrects it. They can change it at any time; the plan updates its substitutions.
+3. **Coach ranking:** each substitute has a coach-assigned rank for stimulus quality. The plan *recommends* the highest-ranked option the athlete has equipment for, and *still shows* the other available options, ranked, for the athlete to choose. The athlete's choice is logged with the session.
 4. **Specific vs. support:** *race-specific* substitutes (they mimic the station's movement and fatigue) are preferred in HYROX-specific sessions such as compromised runs and simulations. *Strength-support* substitutes build the underlying capacity and are placed in strength sessions.
 5. If no option is possible, the plan says so plainly rather than prescribing something the athlete can't do.
 
@@ -32,7 +32,9 @@ Status: working draft, 2026-10-15. Items marked **(PO)** came from the product o
 | `sandbag` | Sandbag | |
 | `open_floor` | ~10 m open floor | For burpee broad jumps |
 
-## Substitutions (preference order)
+## Substitutions
+
+Ranks below are placeholders (list order) until the coach assigns stimulus rankings.
 
 ### Sled Push **(PO)**
 | # | Option | Type | Requires |
@@ -56,7 +58,7 @@ Status: working draft, 2026-10-15. Items marked **(PO)** came from the product o
 | 5 | Romanian deadlifts + bent-over rows | support | `barbell_rack` or `dumbbells` |
 | 6 | RowErg, damper 10 | specific | `rower` |
 
-### Other stations **(draft)**
+### Other stations **(approved by PO)**
 | Station | Substitutes in order |
 |---|---|
 | SkiErg | Rower or bike erg intervals at matched effort, plus straight-arm pulldowns (cable or band) |
@@ -66,6 +68,25 @@ Status: working draft, 2026-10-15. Items marked **(PO)** came from the product o
 | Sandbag Lunges | Dumbbell or kettlebell front-rack lunges |
 | Wall Balls | Dumbbell or kettlebell thrusters |
 
-## Open questions
-- Should RowErg damper 10 move higher in the sled pull order? It is the only fully conditioning-based option and is widely available.
-- Does *Gym* setup pre-tick typical gym equipment for the athlete to correct, or start empty?
+## Presets (draft — coach to correct)
+
+✓ = pre-ticked. Items that are only *sometimes* present are left unticked so the plan never assumes equipment the athlete doesn't have.
+
+| Item | Home | CrossFit gym | Commercial gym | HYROX Training Club |
+|---|---|---|---|---|
+| Outdoor running | ✓ | ✓ | ✓ | ✓ |
+| Treadmill | | | ✓ | ✓ |
+| Curved treadmill | | | | ✓ |
+| SkiErg | | ✓ | | ✓ |
+| Rower | | ✓ | ✓ | ✓ |
+| Bike erg / air bike | | ✓ | ✓ | ✓ |
+| Sled + turf lane | | | | ✓ |
+| Weight plates | | ✓ | ✓ | ✓ |
+| Barbell + rack | | ✓ | ✓ | ✓ |
+| Dumbbells | | ✓ | ✓ | ✓ |
+| Kettlebells | | ✓ | ✓ | ✓ |
+| Cable machine | | | ✓ | |
+| Battle rope | | | | ✓ |
+| Wall ball + target | | ✓ | | ✓ |
+| Sandbag | | ✓ | | ✓ |
+| Open floor (~10 m) | | ✓ | ✓ | ✓ |
