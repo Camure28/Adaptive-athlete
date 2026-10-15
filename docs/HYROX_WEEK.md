@@ -1,6 +1,6 @@
 # HYROX Training Week Structure
 
-Status: approved by product owner 2026-10-15, except race-simulation rules (pending).
+Status: approved by product owner 2026-10-15.
 
 ## Session types
 | Session | Purpose |
@@ -27,6 +27,7 @@ Status: approved by product owner 2026-10-15, except race-simulation rules (pend
 - Phases: base (aerobic + strength) → build (compromised + threshold) → peak (simulations + race pace) → taper.
 - Strength and station days count toward the weekly hard-day limit, not just runs.
 
-## Race simulations (pending product owner)
-- Half simulations in build.
-- Full simulations in peak: how many, minimum gap before race day, and whether first-timers do them.
+## Race simulations (approved)
+- Half simulations (4 runs + 4 stations) in the build phase.
+- Full simulations (8 + 8) in the peak phase: 1–2 for all levels, including first-timers, so the race distance isn't new on race day.
+- The last full simulation is no closer than 10–14 days before race day.
