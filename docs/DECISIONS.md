@@ -27,3 +27,20 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Decision:** Only sources listed in `LLM_ELIGIBLE_SOURCES` (currently manual entry, file import, engine output) may be sent to an AI model. Others are added only after their current terms are reviewed and recorded here.
 **Why:** Strava's API policy (effective 2026-06-01) prohibits sending its data to AI models; other providers have their own conditions.
 **Status:** Accepted (proposed by Claude, implemented in `packages/engine/src/explain/llm-context.ts`).
+
+## D-006 — HYROX onboarding flow (2026-10-15)
+**Decision:** Seven screens: race, experience, running, schedule, equipment, limitations, review. Details in `docs/ONBOARDING.md`.
+**Status:** Accepted.
+
+## D-007 — Units (2026-10-15)
+**Decision:** Miles by default, with a setting to switch to kilometres. HYROX race segments keep their official 1 km label.
+**Status:** Accepted.
+
+## D-008 — Target finish time (2026-10-15)
+**Decision:** Recorded at onboarding but not used to change the plan yet. Later it drives pacing guidance once it can be checked against the athlete's benchmarks.
+**Status:** Accepted (Claude's recommendation).
+
+## D-009 — Sport focus selector (future) (2026-10-15)
+**Decision:** The app will eventually start with a focus choice (HYROX, running, other). For now the app is HYROX-only and the selector is not shown.
+**Why it's cheap later:** the engine already keeps sports separate — the running plan generator and the HYROX generator share pace math and adaptation rules, and plan goals are typed by kind (`race` vs `hyrox`). Adding a focus means adding a generator, not restructuring.
+**Status:** Noted for later.
