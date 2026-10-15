@@ -77,7 +77,7 @@ Ranks below are placeholders (list order) until the coach assigns stimulus ranki
 | Outdoor running | ✓ | ✓ | ✓ | ✓ |
 | Treadmill | | | ✓ | ✓ |
 | Curved treadmill | | | | ✓ |
-| SkiErg | | ✓ | | ✓ |
+| SkiErg | | | | ✓ |
 | Rower | | ✓ | ✓ | ✓ |
 | Bike erg / air bike | | ✓ | ✓ | ✓ |
 | Sled + turf lane | | | | ✓ |
