@@ -186,6 +186,55 @@ end $$;
 commit;
 
 -- ---------------------------------------------------------------------------------------------
+-- Onboarding save (new user C), atomic and owner-scoped
+-- ---------------------------------------------------------------------------------------------
+insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000003', 'c@example.test');
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'cccccccc-0000-0000-0000-000000000003';
+select public.save_hyrox_onboarding('{
+  "units": "mi", "level": "first_timer", "wantsDoubles": null, "gymTypes": ["crossfit"],
+  "availableDays": [0,2,3,5], "longDay": 5, "weekdayMinutes": 60, "weekendMinutes": 90, "weeklyRunMeters": 16093,
+  "equipment": ["outdoor_run", "rower", "kettlebells"], "limitations": ["jumping"], "limitationNote": "",
+  "raceDate": "2027-02-27", "division": "women_open", "targetFinishSeconds": null,
+  "results": [{"kind": "run", "date": "2026-09-20", "distanceMeters": 5000, "finishSeconds": 1680, "timing": "self_reported"}],
+  "consentHealthData": true, "policyVersion": "v1"
+}'::jsonb);
+-- Saving again with changed equipment replaces rather than duplicates
+select public.save_hyrox_onboarding('{
+  "units": "km", "level": "first_timer", "wantsDoubles": null, "gymTypes": ["crossfit"],
+  "availableDays": [0,2,3,5], "longDay": 5, "weekdayMinutes": 60, "weekendMinutes": 90, "weeklyRunMeters": 16093,
+  "equipment": ["outdoor_run", "rower"], "limitations": [], "limitationNote": "",
+  "raceDate": "2027-03-06", "division": "women_open", "targetFinishSeconds": 5400,
+  "results": [{"kind": "run", "date": "2026-09-20", "distanceMeters": 5000, "finishSeconds": 1680, "timing": "self_reported"}],
+  "consentHealthData": true, "policyVersion": "v1"
+}'::jsonb);
+select pg_temp.expect((select count(*) from public.athletes) = 1 and (select units from public.athletes) = 'km',
+  'onboarding creates one athlete for the signed-in user and updates it on re-save');
+select pg_temp.expect((select count(*) from public.athlete_equipment) = 2, 're-saving replaces the equipment list');
+select pg_temp.expect((select count(*) from public.athlete_limitations) = 0, 're-saving replaces limitations');
+select pg_temp.expect((select count(*) from public.goals) = 1 and (select event_date from public.goals) = '2027-03-06',
+  're-saving updates the active goal instead of adding another');
+select pg_temp.expect((select count(*) from public.race_results) = 1, 're-saving does not duplicate results');
+select pg_temp.expect((select count(*) from public.consents) = 1, 'consent is recorded once per policy version');
+do $$ begin
+  perform public.save_hyrox_onboarding('{"units":"mi","level":"elite","availableDays":[0],"weekdayMinutes":60,"weekendMinutes":60,"weeklyRunMeters":0,"equipment":[],"limitations":[],"raceDate":"2027-01-01","division":"women_open"}'::jsonb);
+  raise exception 'FAILED: invalid level saved';
+exception when check_violation then raise notice 'ok - invalid onboarding answers are rejected as a whole';
+end $$;
+select pg_temp.expect((select level from public.hyrox_profiles) = 'first_timer', 'a rejected save leaves the previous answers intact');
+commit;
+
+begin;
+set local role anon;
+do $$ begin
+  perform public.save_hyrox_onboarding('{}'::jsonb);
+  raise exception 'FAILED: anon saved onboarding';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot save onboarding';
+end $$;
+commit;
+
+-- ---------------------------------------------------------------------------------------------
 -- Account deletion removes everything for that athlete and nothing else
 -- ---------------------------------------------------------------------------------------------
 delete from auth.users where id = 'bbbbbbbb-0000-0000-0000-000000000002';
@@ -195,6 +244,6 @@ select pg_temp.expect(
   and (select count(*) from public.adaptation_decisions where athlete_id = 'b0000000-0000-0000-0000-00000000000b') = 0
   and (select count(*) from public.completed_workouts where athlete_id = 'b0000000-0000-0000-0000-00000000000b') = 0,
   'deleting an account removes all of that athlete''s data, history included');
-select pg_temp.expect((select count(*) from public.athletes) = 1, 'other athletes are untouched by a deletion');
+select pg_temp.expect((select count(*) from public.athletes) = 2, 'other athletes are untouched by a deletion');
 
 \echo 'ALL SECURITY TESTS PASSED'

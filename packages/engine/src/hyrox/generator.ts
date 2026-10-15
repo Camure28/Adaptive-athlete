@@ -32,7 +32,7 @@ import type {
   Weekday,
   WorkoutStep,
 } from "../types.js";
-import { addDays, daysBetween, startOfWeek } from "../units/units.js";
+import { addDays, daysBetween, formatDuration, startOfWeek } from "../units/units.js";
 import { currentVdot, trainingPaces } from "../performance/vdot.js";
 import { DEFAULT_PLAN_CONFIG } from "../plan/config.js";
 import { assignPhases, progressVolumes } from "../plan/generator.js";
@@ -436,7 +436,7 @@ const STRENGTH_TARGET: IntensityTarget = { zone: "threshold", rpe: { min: 6, max
 
 function stationStep(env: SessionEnv, station: HyroxStation, fraction: number, context: SessionContext): WorkoutStep {
   const have = new Set(env.athlete.equipment);
-  const { recommended, alternatives } = resolveStation(station, have, context);
+  const { recommended, alternatives, conflictsWithLimitation } = resolveStation(station, have, context, env.athlete.exclusions);
   const vol = RACE_VOLUME[station];
   const step = vol.unit === "reps" ? 5 : station === "sled_push" || station === "sled_pull" ? 12.5 : 25;
   const amount = Math.max(step, Math.round((vol.amount * fraction) / step) * step);
@@ -447,7 +447,7 @@ function stationStep(env: SessionEnv, station: HyroxStation, fraction: number, c
     station,
     // Substitutes don't share the station's units (25 m of RowErg is meaningless), so they are
     // prescribed by time: the work the athlete would spend on that much of the real station.
-    volume: real || !recommended ? raceVolume : `${Math.max(30, workSeconds)} s of hard work (replaces ${raceVolume} of ${STATION_NAMES[station]})`,
+    volume: real || !recommended ? raceVolume : `${formatDuration(Math.max(30, workSeconds))} of hard work (replaces ${raceVolume} of ${STATION_NAMES[station]})`,
     recommended,
     alternatives,
   };
@@ -460,7 +460,13 @@ function stationStep(env: SessionEnv, station: HyroxStation, fraction: number, c
   } else if (recommended && !real && (station === "sled_push" || station === "sled_pull" || station === "farmers_carry" || station === "sandbag_lunges")) {
     prescription.load = "Heavy: a load you could just hold for this time at RPE 8";
   }
-  if (!recommended) prescription.unavailableNote = `None of your equipment can train ${STATION_NAMES[station].toLowerCase()}. Add equipment or swap this block for an easy run.`;
+  if (!recommended) {
+    prescription.unavailableNote = conflictsWithLimitation
+      ? `${STATION_NAMES[station]} involves a movement you've asked to avoid, and none of your options avoid it. Check with a physio or coach before racing this station; skip this block for now.`
+      : `None of your equipment can train ${STATION_NAMES[station].toLowerCase()}. Add equipment or swap this block for an easy run.`;
+  } else if (conflictsWithLimitation) {
+    prescription.unavailableNote = `The race version of ${STATION_NAMES[station].toLowerCase()} involves a movement you've asked to avoid, so this uses the closest option that doesn't.`;
+  }
   return {
     kind: "station",
     durationSeconds: Math.round(STATION_SECONDS[env.athlete.level] * fraction),
@@ -503,7 +509,7 @@ function buildSession(slot: Slot, date: IsoDate, env: SessionEnv): PlannedWorkou
       const reps = env.phase === "base" ? 3 : 4;
       return finalize(env, {
         id: wid(opts.planId, date, "threshold"), date, sport: "run", type: "threshold",
-        title: `Threshold: ${reps} × 1.6 km`,
+        title: `Threshold: ${reps} repeats`,
         objective: "Raise the running pace you can sustain under fatigue.",
         rationale: "Threshold work is the backbone of HYROX run fitness: it lets you run each 1 km segment faster without blowing up at the next station.",
         steps: [
@@ -627,12 +633,15 @@ function strengthSession(env: SessionEnv, date: IsoDate): PlannedWorkout {
   const have = new Set(env.athlete.equipment);
   // Strength days use the coach's strength-support options, never the conditioning stations.
   const support = (st: HyroxStation): string | null => {
-    const { recommended, alternatives } = resolveStation(st, have, "strength");
+    const { recommended, alternatives } = resolveStation(st, have, "strength", env.athlete.exclusions);
     return [recommended, ...alternatives].find((o) => o?.kind === "support")?.name ?? null;
   };
-  const hinge = have.has("barbell_rack") || have.has("dumbbells") ? "Romanian deadlifts" : have.has("kettlebells") ? "Kettlebell deadlifts" : "Single-leg hip hinges";
+  const avoid = env.athlete.exclusions;
+  const hinge = avoid.includes("heavy_hinging")
+    ? "Glute bridges"
+    : have.has("barbell_rack") || have.has("dumbbells") ? "Romanian deadlifts" : have.has("kettlebells") ? "Kettlebell deadlifts" : "Single-leg hip hinges";
   const items = [
-    support("sled_push") ?? "Bodyweight split squats",
+    support("sled_push") ?? (avoid.includes("deep_knee_bends") ? "Hamstring bridges" : "Bodyweight split squats"),
     hinge,
     support("sled_pull") ?? "Band rows",
     support("skierg") ?? "Band pulldowns",

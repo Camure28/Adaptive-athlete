@@ -108,6 +108,23 @@ const SUBSTITUTES: Record<HyroxStation, CatalogEntry[]> = {
 
 export type SessionContext = "race_specific" | "strength";
 
+/** Movements an athlete can ask to avoid at onboarding (data minimisation: no diagnoses). */
+export const LIMITATIONS = ["jumping", "deep_knee_bends", "overhead", "heavy_hinging", "running_downhill"] as const;
+export type Limitation = (typeof LIMITATIONS)[number];
+
+/** Which options involve each avoidable movement. Plans are flat, so downhill running excludes nothing here. */
+const AVOID: Record<Limitation, readonly string[]> = {
+  jumping: ["bbj", "burpees_plus_broad_jumps"],
+  deep_knee_bends: ["back_squat", "bulgarian_split_squat", "walking_lunges", "front_rack_lunges", "sandbag_lunges", "wall_balls", "thrusters"],
+  overhead: ["wall_balls", "thrusters"],
+  heavy_hinging: ["rdl_rows", "kb_dl_high_pull"],
+  running_downhill: [],
+};
+
+export function isAvoided(optionId: string, avoid: readonly string[]): boolean {
+  return avoid.some((a) => (AVOID as Record<string, readonly string[]>)[a]?.includes(optionId));
+}
+
 const satisfies = (req: Requirement, have: ReadonlySet<Equipment>): boolean =>
   req.every((group) => group.some((e) => have.has(e)));
 
@@ -116,6 +133,8 @@ const strip = ({ requires: _r, ...o }: CatalogEntry): StationOption => o;
 export interface StationResolution {
   recommended: StationOption | null;
   alternatives: StationOption[];
+  /** True when the real race station involves a movement the athlete asked to avoid. */
+  conflictsWithLimitation: boolean;
 }
 
 /**
@@ -125,9 +144,14 @@ export interface StationResolution {
  *   better rating (D-003). Concretely for SkiErg: rower first, pulldowns only without a rower.
  * - In strength sessions, the coach rating order applies as-is.
  */
-export function resolveStation(station: HyroxStation, have: ReadonlySet<Equipment>, context: SessionContext): StationResolution {
+export function resolveStation(
+  station: HyroxStation,
+  have: ReadonlySet<Equipment>,
+  context: SessionContext,
+  avoid: readonly string[] = [],
+): StationResolution {
   const real = REAL[station];
-  const subs = SUBSTITUTES[station].filter((s) => satisfies(s.requires, have));
+  const subs = SUBSTITUTES[station].filter((s) => satisfies(s.requires, have) && !isAvoided(s.id, avoid));
   const ordered = subs
     .map((s, i) => ({ s, i }))
     .sort((a, b) => {
@@ -138,8 +162,9 @@ export function resolveStation(station: HyroxStation, have: ReadonlySet<Equipmen
       return RATING_ORDER[a.s.rating] - RATING_ORDER[b.s.rating] || a.i - b.i;
     })
     .map(({ s }) => strip(s));
-  const all = satisfies(real.requires, have) ? [strip(real), ...ordered] : ordered;
-  return { recommended: all[0] ?? null, alternatives: all.slice(1) };
+  const conflictsWithLimitation = isAvoided(real.id, avoid);
+  const all = satisfies(real.requires, have) && !conflictsWithLimitation ? [strip(real), ...ordered] : ordered;
+  return { recommended: all[0] ?? null, alternatives: all.slice(1), conflictsWithLimitation };
 }
 
 /** Options the coach rated "don't use". Never offered; listed so tests can pin the exclusion. */

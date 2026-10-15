@@ -217,7 +217,7 @@ describe("station prescriptions", () => {
     expect(subs.length).toBeGreaterThan(0);
     for (const s of subs) {
       expect(s.station!.raceLoad).toBeUndefined();
-      expect(s.station!.volume).toMatch(/s of hard work/);
+      expect(s.station!.volume).toMatch(/^\d+:\d{2} of hard work/);
     }
   });
 
@@ -241,6 +241,37 @@ describe("station prescriptions", () => {
     const p = plan(athlete("intermediate"));
     const seen = new Set(all(p).flatMap((w) => w.steps).flatMap((s) => (s.station ? [s.station.station] : [])));
     expect(seen.size).toBe(8);
+  });
+});
+
+describe("movement limitations", () => {
+  it("removes options that involve an avoided movement and says why", () => {
+    const p = plan(athlete("intermediate", { exclusions: ["jumping"] }));
+    const bbj = all(p).flatMap((w) => w.steps).filter((s) => s.station?.station === "burpee_broad_jump");
+    expect(bbj.length).toBeGreaterThan(0);
+    for (const s of bbj) {
+      expect(s.station!.recommended?.name).toBe("Burpee + step-back");
+      expect(s.station!.alternatives.map((a) => a.name)).not.toContain("Burpees and broad jumps separately");
+      expect(s.station!.unavailableNote).toMatch(/avoid/);
+    }
+  });
+
+  it("never prescribes a conflicting station when no safe option exists", () => {
+    const p = plan(athlete("intermediate", { exclusions: ["overhead"] }));
+    const wb = all(p).flatMap((w) => w.steps).filter((s) => s.station?.station === "wall_balls");
+    expect(wb.length).toBeGreaterThan(0);
+    for (const s of wb) {
+      expect(s.station!.recommended).toBeNull();
+      expect(s.station!.unavailableNote).toMatch(/physio or coach/);
+    }
+  });
+
+  it("keeps avoided movements out of strength days", () => {
+    const p = plan(athlete("intermediate", { exclusions: ["deep_knee_bends", "heavy_hinging"], equipment: [...presetFor(["commercial"])] }));
+    for (const w of all(p).filter((x) => x.type === "strength")) {
+      const text = w.steps.map((s) => s.note ?? "").join(" ");
+      expect(text).not.toMatch(/lunge|squat|deadlift/i);
+    }
   });
 });
 
