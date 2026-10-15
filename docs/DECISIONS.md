@@ -14,13 +14,14 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Status:** Accepted.
 
 ## D-003 — Equipment checklist drives programming (2026-10-15)
-**Decision:** Athletes tick the equipment they can access. The plan uses the real station where available and a documented substitution where not. Athletes can change the checklist at any time.
+**Decision:** Athletes first choose a setup type (Gym, Home, or Both), then tick the equipment they can access. The plan uses the real station where available, otherwise the first substitution in a coach-ordered list whose equipment is ticked. Race-specific substitutes are used in HYROX-specific sessions; strength-support substitutes go in strength sessions. Athletes can change the checklist at any time.
 **Why:** Most gyms are not fully HYROX-equipped; a plan that assumes a sled the athlete doesn't have is unusable.
-**Status:** Accepted. Checklist contents and substitutions under review (next step).
+**Status:** Accepted. Sled push/pull substitutions provided by product owner. Catalog in `docs/HYROX_EQUIPMENT.md`; other stations still in draft.
 
 ## D-004 — All athlete levels supported (2026-10-15)
 **Decision:** Plans support first-timers through competitive athletes. Level adjusts volume, intensity, number of hard sessions, and station progression.
-**Status:** Accepted. Level definitions under review (next step).
+**Levels:** First-timer (no HYROX finish yet), Intermediate (has finished one or more), Advanced (racing for time or age-group places), Competitive (Pro division, Worlds qualification). The athlete picks a starting level; benchmarks and logged sessions refine it. Division (Open/Pro) is a separate choice and sets station weights.
+**Status:** Accepted.
 
 ## D-005 — Provider data never reaches the LLM without a terms review (2026-10-15)
 **Decision:** Only sources listed in `LLM_ELIGIBLE_SOURCES` (currently manual entry, file import, engine output) may be sent to an AI model. Others are added only after their current terms are reviewed and recorded here.
