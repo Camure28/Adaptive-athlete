@@ -1,6 +1,6 @@
 # HYROX Equipment & Station Substitutions
 
-Status: approved by product owner 2026-10-15. Coach stimulus rankings and gym-type presets still to be finalised.
+Status: approved by product owner 2026-10-15, including coach ratings. Presets accepted with SkiErg removed from CrossFit.
 
 ## How it works
 
@@ -34,41 +34,54 @@ Status: approved by product owner 2026-10-15. Coach stimulus rankings and gym-ty
 
 ## Substitutions
 
-Ranks below are placeholders (list order) until the coach assigns stimulus rankings.
+Coach ratings submitted 2026-10-15. Ratings: **Best > Good > Fallback**. Ties keep the order shown. The plan recommends the highest-rated option the athlete has equipment for and shows the rest below it. Options rated *Don't use* are excluded and must not be re-added without the coach.
 
-### Sled Push **(PO)**
-| # | Option | Type | Requires |
+### Sled Push
+| Rating | Option | Type | Requires |
 |---|---|---|---|
-| 0 | Sled push | real station | `sled`, `turf_lane` |
-| 1 | Resisted treadmill pushing | specific | `curved_treadmill` |
-| 2 | Pushing heavy plates across turf | specific | `plates`, `turf_lane` |
-| 3 | Heavy back squats | support | `barbell_rack` |
-| 4 | Bulgarian split squats | support | `dumbbells` or `kettlebells` |
-| 5 | Weighted walking lunges | support | `dumbbells` or `kettlebells` |
-| 6 | Heavy farmer's carries | support | `dumbbells` or `kettlebells` |
+| — | Sled push (real station) | real | `sled`, `turf_lane` |
+| Best | Resisted treadmill pushing | specific | `curved_treadmill` |
+| Good | Pushing heavy plates across turf | specific | `plates`, `turf_lane` |
+| Good | Weighted walking lunges | support | `dumbbells` or `kettlebells` |
+| Fallback | Heavy back squats | support | `barbell_rack` |
+| Fallback | Bulgarian split squats | support | `dumbbells` or `kettlebells` |
 
-### Sled Pull **(PO)**
-| # | Option | Type | Requires |
+Excluded: heavy farmer's carries.
+
+### Sled Pull
+| Rating | Option | Type | Requires |
 |---|---|---|---|
-| 0 | Sled pull | real station | `sled`, `turf_lane` |
-| 1 | Timed hand-over-hand cable rows | specific | `cable_machine` |
-| 2 | Battle rope pulls | specific | `battle_rope` |
-| 3 | Kettlebell see-saw rows | support | `kettlebells` |
-| 4 | Kettlebell deadlift to high pull | support | `kettlebells` |
-| 5 | Romanian deadlifts + bent-over rows | support | `barbell_rack` or `dumbbells` |
-| 6 | RowErg, damper 10 | specific | `rower` |
+| — | Sled pull (real station) | real | `sled`, `turf_lane` |
+| Good | Timed hand-over-hand cable rows | specific | `cable_machine` |
+| Good | Battle rope pulls | specific | `battle_rope` |
+| Good | Kettlebell see-saw rows | support | `kettlebells` |
+| Fallback | Kettlebell deadlift to high pull | support | `kettlebells` |
+| Fallback | Romanian deadlifts + bent-over rows | support | `barbell_rack` or `dumbbells` |
+| Fallback | RowErg, damper 10 | specific | `rower` |
 
-### Other stations **(approved by PO)**
-| Station | Substitutes in order |
+### SkiErg
+| Rating | Option | Requires |
+|---|---|---|
+| Good | Straight-arm pulldowns | `cable_machine` (or band) |
+| Fallback | Rower intervals at matched effort | `rower` |
+
+Excluded: bike erg intervals.
+
+### Rowing
+| Rating | Option | Requires |
+|---|---|---|
+| Good | Bike erg at matched effort | `bike_erg` |
+| Fallback | SkiErg at matched effort | `skierg` |
+
+### Other stations (all rated Good)
+| Station | Options |
 |---|---|
-| SkiErg | Rower or bike erg intervals at matched effort, plus straight-arm pulldowns (cable or band) |
-| Rowing | SkiErg or bike erg at matched effort |
-| Burpee Broad Jumps | Burpees and broad jumps performed separately; with no space, burpee + step-back |
-| Farmers Carry | Dumbbells, kettlebells, or trap bar at race load; with nothing heavy, loaded holds |
+| Burpee Broad Jumps | Burpees and broad jumps separately (`open_floor`); burpee + step-back (no space needed) |
+| Farmers Carry | Dumbbells; trap bar; loaded holds |
 | Sandbag Lunges | Dumbbell or kettlebell front-rack lunges |
 | Wall Balls | Dumbbell or kettlebell thrusters |
 
-## Presets (draft — coach to correct)
+## Presets
 
 ✓ = pre-ticked. Items that are only *sometimes* present are left unticked so the plan never assumes equipment the athlete doesn't have.
 
