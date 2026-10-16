@@ -111,3 +111,16 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Before launch:** Apple requires apps that let people create accounts to also let them delete their account in the app, so "Delete my account" must be built before App Store submission. Subscriptions (D-013) need in-app purchase set up; billing then lives in the athlete's App Store account.
 **Status:** Accepted (product owner 2026-10-16).
 
+
+## D-022 — Plans are saved on the server as immutable versions (2026-10-16)
+**Decision:** A Supabase Edge Function, `generate-plan`, builds the plan from the athlete's *saved* answers (never from what the app sends) and stores it through `record_plan_version`, which only the server can call. Version 1 is created when onboarding is finished; saving edited answers creates the next version ("regenerated"); adaptation will add later versions. Earlier versions are never changed. The app shows the current version and no longer rebuilds the plan each time it opens, so the plan stays put from day to day. Demo mode still builds on the phone.
+**Mid-week changes (product owner):** a new version keeps this week's sessions exactly as they were (through Sunday) and the rebuilt plan takes over from next Monday.
+**Why:** adaptation (the paid product, D-013) needs a trustworthy history of what was prescribed and when. Keeping plan writes on the server means an athlete can't save a made-up plan, matching the security model (`SECURITY.md`).
+**Details:** each version records the engine version, the exact engine inputs, the weeks and every session (`DATA_MODEL.md`). A session's `workout_key` (date and session type) stays the same across versions; with the plan id it rebuilds the session id the import matcher uses. The engine is bundled into the function by `pnpm functions:build`; the function uses the project's secret key, which Supabase provides to Edge Functions and which is never in the app or the repo.
+**Later:** when the paywall arrives (D-013), weeks an athlete hasn't unlocked must be withheld on the server, since athletes can read every stored week.
+**Status:** Accepted (product owner approved the approach and the mid-week rule 2026-10-16). Migration `20261016000006_plan_storage.sql` and the function deploy are applied from Cameron's Mac.
+
+## D-023 — Apple Health is the first automatic workout import (2026-10-16)
+**Decision:** Workouts are imported automatically through Apple Health first; it also carries Garmin Connect and Strava workouts that those apps write to it. The import logic is built now, before buying the Apple Developer Program, so it can be switched on as soon as the membership exists. No direct Garmin (new API access paused) or Strava (capped, and bans AI use, D-005) connection is planned for now.
+**Details:** `docs/INTEGRATIONS.md`, "Automatic workout import"; pipeline in `packages/engine/src/imports/`. `apple_health` stays out of `LLM_ELIGIBLE_SOURCES` until Apple's HealthKit rules are reviewed.
+**Status:** Accepted (product owner 2026-10-16, claude.ai Project chat). Number assigned by Claude Code, as that chat asked.

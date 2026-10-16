@@ -10,3 +10,5 @@ coverage/
 data/private/
 *.fit
 !packages/**/fixtures/**/*.fit
+# Engine bundle for Edge Functions, rebuilt by `pnpm functions:build`
+supabase/functions/_shared/engine.js

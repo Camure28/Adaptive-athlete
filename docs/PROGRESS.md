@@ -6,8 +6,15 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — Claude Code on Cameron's Mac (step 5: plan storage)
+- **Done:** plans are saved on the server as immutable versions (D-022). Migration `20261016000006_plan_storage.sql` pushed live; Edge Function `generate-plan` deployed (Cameron ran `pnpm functions:deploy`; Claude Code's safety check blocks production deploys from Claude). The app saves answers, then builds a version on the server; the plan screen loads the saved version (or builds one on first open). This week's sessions carry over when answers change mid-week (Cameron's rule). Engine: `ENGINE_VERSION`, `planToRecord`/`planFromRecord`, `inputsFromProfile` (`src/store/`). Tests: engine round trip, phone vs server inputs agree, 57 database checks (new: plan versions server-only, carry-over, ownership, one active plan per goal), and a real 253-session plan stored and read back identical on a local Postgres.
+- **Verified by Cameron on the phone:** first plan built and shown from the server (version 1: 21 weeks, 176 sessions).
+- **Decisions:** D-022 (plan storage) and D-023 (Apple Health first, numbered as the import chat asked).
+- **Tooling:** Postgres 17 via Homebrew for `pnpm db:test` on the Mac (how to run it in `CLAUDE.md`); `esbuild` bundles the engine into the function.
+- **Open:** try Edit my answers on the phone (should show version 2 with this week unchanged). Step 6, workout logging, should link logs to a planned session by `plan_id` + `workout_key`. Paywall (D-013) will need locked weeks withheld on the server.
+
 ## 2026-10-16 — claude.ai Project chat (build session, continued)
-- **Decided with Cameron:** Apple Health is the first automatic import channel (it also brings in Garmin and Strava workouts that those apps write to it). Keep building before buying the Apple Developer Program so it switches on as soon as he joins. Garmin's API is paused for new apps; Strava is capped and bans AI use. Details and sources in `INTEGRATIONS.md`, "Automatic workout import". *Decision number to be assigned by the next session that adds decisions (Claude Code was mid step 5, to avoid a numbering clash).*
+- **Decided with Cameron (D-023):** Apple Health is the first automatic import channel (it also brings in Garmin and Strava workouts that those apps write to it). Keep building before buying the Apple Developer Program so it switches on as soon as he joins. Garmin's API is paused for new apps; Strava is capped and bans AI use. Details and sources in `INTEGRATIONS.md`, "Automatic workout import". *Decision number to be assigned by the next session that adds decisions (Claude Code was mid step 5, to avoid a numbering clash).*
 - **Done:** the import pipeline in the engine (`packages/engine/src/imports/`), with 24 tests: Apple Health adapter, validation, idempotent re-imports, duplicate copies, merge into a hand log, plan matching (asks when ambiguous), follow-up questions. Engine only; no app or database changes, so no conflict with step 5.
 - **Open (Claude Code):** finish step 5; step 6 manual logging should store into the same shape and add the import columns listed in `INTEGRATIONS.md`. Then the server import function, and HealthKit itself after the developer program.
 

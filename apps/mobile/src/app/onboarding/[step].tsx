@@ -16,6 +16,7 @@ export default function OnboardingStep() {
   const { answers, update, setAnswers } = useSession();
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
   const Body = STEP_COMPONENTS[step];
 
@@ -26,9 +27,13 @@ export default function OnboardingStep() {
     if (Object.keys(e).length > 0) return;
     if (step !== "review") return router.push(`/onboarding/${STEPS[index + 1]}` as Href);
     setBusy(true);
+    setStage(0);
     setSaveError(null);
     try {
       await backend.saveOnboarding(answers, today);
+      setStage(1);
+      // A new plan version from the answers just saved (built on the server; D-022).
+      await backend.buildPlan(today);
       router.replace("/plan");
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Your answers couldn't be saved. Try again.");
@@ -37,7 +42,7 @@ export default function OnboardingStep() {
     }
   };
 
-  if (busy) return <TechLoader lines={["SAVING ATHLETE PROFILE", "GENERATING TRAINING PLAN"]} stage={0} />;
+  if (busy) return <TechLoader lines={["SAVING ATHLETE PROFILE", "GENERATING TRAINING PLAN"]} stage={stage} />;
 
   return (
     <Screen

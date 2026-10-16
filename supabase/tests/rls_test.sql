@@ -30,12 +30,14 @@ insert into public.goals (id, athlete_id, kind, event_date, hyrox_division) valu
 insert into public.training_plans (id, athlete_id, goal_id) values
   ('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-00000000000a'),
   ('b2000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-00000000000b', 'b1000000-0000-0000-0000-00000000000b');
-insert into public.plan_versions (id, plan_id, athlete_id, version, engine_version, basis, reason) values
-  ('a3000000-0000-0000-0000-00000000000a', 'a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 1, 'test', '{}', 'generated'),
-  ('b3000000-0000-0000-0000-00000000000b', 'b2000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-00000000000b', 1, 'test', '{}', 'generated');
-insert into public.planned_workouts (plan_version_id, athlete_id, workout_key, scheduled_date, sport, session_type, title, estimated_minutes, planned_load, body) values
-  ('a3000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 'k1', '2026-10-20', 'hyrox', 'compromised_run', 'Compromised run', 45, 300, '{}'),
-  ('b3000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-00000000000b', 'k1', '2026-10-20', 'hyrox', 'compromised_run', 'Compromised run', 50, 350, '{}');
+insert into public.plan_versions (id, plan_id, athlete_id, version, engine_version, basis, reason, starts_on, weeks, inputs) values
+  ('a3000000-0000-0000-0000-00000000000a', 'a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 1, 'test', '{}', 'generated',
+   '2026-10-19', '[{"startDate": "2026-10-19", "phase": "base", "isRecoveryWeek": false, "targetRunMeters": 20000}]', '{}'),
+  ('b3000000-0000-0000-0000-00000000000b', 'b2000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-00000000000b', 1, 'test', '{}', 'generated',
+   '2026-10-19', '[{"startDate": "2026-10-19", "phase": "base", "isRecoveryWeek": false, "targetRunMeters": 30000}]', '{}');
+insert into public.planned_workouts (plan_version_id, athlete_id, workout_key, scheduled_date, position, sport, session_type, title, estimated_minutes, planned_load, body) values
+  ('a3000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 'k1', '2026-10-20', 0, 'hyrox', 'compromised_run', 'Compromised run', 45, 300, '{}'),
+  ('b3000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-00000000000b', 'k1', '2026-10-20', 0, 'hyrox', 'compromised_run', 'Compromised run', 50, 350, '{}');
 insert into public.adaptation_decisions (plan_id, athlete_id, from_version, rule_id, rule_version, action, outcome, confidence, what_changed, why, next_steps, evidence, changes) values
   ('b2000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-00000000000b', 1, 'pain_safety', 1, 'add_recovery', 'applied', 1, 'x', 'y', 'z', '[]', '[]');
 insert into public.completed_workouts (athlete_id, workout_date, sport, status, rpe, pain_level) values
@@ -253,6 +255,105 @@ do $$ begin
   raise exception 'FAILED: anon read races';
 exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot read the race list';
 end $$;
+commit;
+
+-- ---------------------------------------------------------------------------------------------
+-- Saving plan versions (D-022): server only, append-only, this week carried over
+-- ---------------------------------------------------------------------------------------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+do $$ begin
+  perform public.record_plan_version('a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-00000000000a', 'forged',
+    '2026-10-26', '{}', '[]', '{}', '[]');
+  raise exception 'FAILED: athlete saved a plan version';
+exception when insufficient_privilege then raise notice 'ok - athletes cannot save plan versions, even for their own goal';
+end $$;
+commit;
+
+begin;
+set local role anon;
+do $$ begin
+  perform public.record_plan_version('a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-00000000000a', 'forged',
+    '2026-10-26', '{}', '[]', '{}', '[]');
+  raise exception 'FAILED: anon saved a plan version';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot save plan versions';
+end $$;
+commit;
+
+begin;
+set local role service_role;
+-- Athlete A's version 1 has sessions on 2026-10-20 (this week) and, added here, 2026-10-28 (next week).
+insert into public.planned_workouts (plan_version_id, athlete_id, workout_key, scheduled_date, position, sport, session_type, title, estimated_minutes, planned_load, body)
+values ('a3000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 'k2', '2026-10-28', 1, 'run', 'easy_run', 'Easy run', 40, 160, '{}');
+
+select pg_temp.expect(
+  public.record_plan_version('a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-00000000000a', '0.1.0', '2026-10-26',
+    '{"notes": []}',
+    '[{"startDate": "2026-10-26", "phase": "build", "isRecoveryWeek": false, "targetRunMeters": 22000}]',
+    '{"goal": {"id": "a1000000-0000-0000-0000-00000000000a"}}',
+    '[{"workout_key": "2026-10-27:threshold", "scheduled_date": "2026-10-27", "position": 0, "sport": "run", "session_type": "threshold",
+       "title": "Threshold", "estimated_minutes": 50, "planned_meters": 9000, "planned_load": 350, "adapted_by_rule": null, "body": {"steps": []}}]')
+  = '{"plan_id": "a2000000-0000-0000-0000-00000000000a", "version": 2}'::jsonb,
+  'a new version of an existing plan is version 2 of the same plan');
+select pg_temp.expect((select current_version from public.training_plans where id = 'a2000000-0000-0000-0000-00000000000a') = 2,
+  'the plan points at its newest version');
+select pg_temp.expect((select reason from public.plan_versions where plan_id = 'a2000000-0000-0000-0000-00000000000a' and version = 2) = 'regenerated',
+  'a rebuilt plan is marked regenerated');
+select pg_temp.expect(
+  (select array_agg(workout_key order by scheduled_date) from public.planned_workouts pw join public.plan_versions v on v.id = pw.plan_version_id
+   where v.plan_id = 'a2000000-0000-0000-0000-00000000000a' and v.version = 2) = array['k1', '2026-10-27:threshold'],
+  'version 2 keeps this week''s sessions unchanged and replaces everything from its start date');
+select pg_temp.expect(
+  (select jsonb_agg(w ->> 'startDate') from public.plan_versions v, jsonb_array_elements(v.weeks) w
+   where v.plan_id = 'a2000000-0000-0000-0000-00000000000a' and v.version = 2) = '["2026-10-19", "2026-10-26"]'::jsonb,
+  'version 2 keeps this week''s week details and adds the new weeks');
+select pg_temp.expect(
+  (select count(*) from public.planned_workouts where plan_version_id = 'a3000000-0000-0000-0000-00000000000a') = 2,
+  'version 1 is left exactly as it was');
+
+-- A goal with no plan yet gets a new plan at version 1.
+insert into public.goals (id, athlete_id, kind, event_date, hyrox_division) values
+  ('a1000000-0000-0000-0000-0000000000a2', 'a0000000-0000-0000-0000-00000000000a', 'hyrox', '2027-06-05', 'men_open');
+select pg_temp.expect(
+  (public.record_plan_version('a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-0000000000a2', '0.1.0', '2026-10-26',
+    '{}', '[]', '{}', '[]') ->> 'version')::int = 1,
+  'the first plan for a goal is version 1');
+select pg_temp.expect(
+  (select reason from public.plan_versions v join public.training_plans t on t.id = v.plan_id
+   where t.goal_id = 'a1000000-0000-0000-0000-0000000000a2') = 'generated',
+  'the first version is marked generated');
+
+do $$ begin
+  perform public.record_plan_version('a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-00000000000a', '0.1.0', '2026-11-02',
+    '{}', '[]', '{}',
+    '[{"workout_key": "x", "scheduled_date": "2026-10-30", "position": 0, "sport": "run", "session_type": "easy_run",
+       "title": "Easy", "estimated_minutes": 30, "planned_meters": null, "planned_load": 100, "adapted_by_rule": null, "body": {}}]');
+  raise exception 'FAILED: new session before the start date saved';
+exception when check_violation then raise notice 'ok - new sessions dated before the version''s start date are rejected';
+end $$;
+select pg_temp.expect((select current_version from public.training_plans where id = 'a2000000-0000-0000-0000-00000000000a') = 2,
+  'a rejected save leaves the plan on its previous version');
+
+do $$ begin
+  perform public.record_plan_version('b0000000-0000-0000-0000-00000000000b', 'a1000000-0000-0000-0000-00000000000a', '0.1.0', '2026-10-26',
+    '{}', '[]', '{}', '[]');
+  raise exception 'FAILED: plan saved for another athlete''s goal';
+exception when foreign_key_violation then raise notice 'ok - a plan can''t be saved against another athlete''s goal';
+end $$;
+
+do $$ begin
+  insert into public.training_plans (athlete_id, goal_id) values ('a0000000-0000-0000-0000-00000000000a', 'a1000000-0000-0000-0000-00000000000a');
+  raise exception 'FAILED: second active plan for a goal';
+exception when unique_violation then raise notice 'ok - a goal has at most one active plan';
+end $$;
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select pg_temp.expect((select count(*) from public.plan_versions where plan_id = 'a2000000-0000-0000-0000-00000000000a') = 2,
+  'the athlete can read every version of their plan');
 commit;
 
 -- ---------------------------------------------------------------------------------------------

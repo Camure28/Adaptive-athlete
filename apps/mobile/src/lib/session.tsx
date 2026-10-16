@@ -29,8 +29,8 @@ export function useSession(): SessionState {
   return v;
 }
 
-/** Today's date in the athlete's own time zone, as YYYY-MM-DD. */
-export function localToday(): string {
-  const d = new Date();
+/** Today's date (or the given moment's date) in the athlete's own time zone, as YYYY-MM-DD. */
+export function localToday(at: Date = new Date()): string {
+  const d = at;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }

@@ -4,6 +4,7 @@
  * - DemoBackend: in-memory, nothing leaves the device or survives a reload. Used only when no
  *   Supabase project is configured; the UI shows a permanent "Demo mode" banner.
  */
+import type { TrainingPlan } from "@adaptive-athlete/engine";
 import type { OnboardingAnswers } from "@/onboarding/model";
 
 export interface Account {
@@ -24,6 +25,13 @@ export interface HyroxEvent {
   verified: boolean;
 }
 
+/** The athlete's current saved plan version (D-022). */
+export interface SavedPlan {
+  plan: TrainingPlan;
+  version: number;
+  savedAt: string; // ISO instant
+}
+
 export interface Backend {
   readonly mode: "supabase" | "demo";
   currentAccount(): Promise<Account | null>;
@@ -33,6 +41,13 @@ export interface Backend {
   saveOnboarding(answers: OnboardingAnswers, today: string): Promise<void>;
   /** The answers last saved, or null if this account hasn't finished onboarding. */
   loadOnboarding(): Promise<OnboardingAnswers | null>;
+  /**
+   * Builds a new plan version from the SAVED answers and stores it. Supabase: the generate-plan
+   * Edge Function does this on the server; the app never writes plans itself.
+   */
+  buildPlan(today: string): Promise<void>;
+  /** The current saved plan version, or null if none has been built yet. */
+  loadPlan(): Promise<SavedPlan | null>;
   /** Races that haven't finished yet, soonest first. */
   listEvents(today: string): Promise<HyroxEvent[]>;
   /** Everything stored about this athlete, as formatted JSON (data export, SECURITY.md). */

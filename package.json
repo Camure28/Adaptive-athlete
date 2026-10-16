@@ -11,10 +11,13 @@
     "test": "pnpm -r test",
     "lint": "eslint .",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
-    "db:test": "bash supabase/tests/run_rls_tests.sh"
+    "db:test": "bash supabase/tests/run_rls_tests.sh",
+    "functions:build": "node scripts/build-functions.mjs",
+    "functions:deploy": "pnpm functions:build && supabase functions deploy generate-plan --use-api"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "esbuild": "0.28.2",
     "eslint": "^9.0.0",
     "supabase": "2.119.0",
     "typescript": "^5.6.0",

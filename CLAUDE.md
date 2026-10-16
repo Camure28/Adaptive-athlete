@@ -17,7 +17,7 @@ Several Claude sessions work on this project (claude.ai Project chats, Claude Co
 ## Layout
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
 - `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
-- `supabase/`: migrations with row-level security; `pnpm db:test` runs the isolation tests on a local Postgres.
+- `supabase/`: migrations with row-level security; `pnpm db:test` runs the isolation tests on a local Postgres. `functions/generate-plan` builds and saves plans on the server (D-022) using the engine bundled by `pnpm functions:build`.
 - `docs/`: decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
 
 ## Commands
@@ -37,14 +37,17 @@ pnpm db:test                               # isolation tests on a local Postgres
 npx supabase db push --dry-run             # shows what would be applied; show Cameron first
 npx supabase db push                       # applies it, only after Cameron says go
 npx supabase migration list                # local vs live history
+pnpm functions:deploy                      # rebuild the engine bundle and deploy generate-plan; show Cameron first
 ```
+- On this Mac, `pnpm db:test` needs a local Postgres 17 (`brew install postgresql@17`, not run as a service). Start a throwaway one on 127.0.0.1:54329 and pass `PSQL_CMD="/opt/homebrew/opt/postgresql@17/bin/psql -h 127.0.0.1 -p 54329 -U postgres"`.
 - Never edit a migration that has already been pushed; add a new one.
 - Run `bash supabase/build_setup_sql.sh` after adding a migration so `setup.sql` stays complete for a brand-new project.
 - If a change was made by hand in the SQL Editor, confirm it exists live (`npx supabase db query --linked "..."`), then record it with `npx supabase migration repair --status applied <version>`.
 - The CLI uses Cameron's login (macOS keychain) and a temporary login role, so no database password is needed. If `supabase/.temp/project-ref` is missing (new machine or fresh clone), Cameron runs `npx supabase login` and `npx supabase link --project-ref hjqtbhnsjrmvpiudwnux`.
 
 ## Status (2026-10-16)
-- Done: engine (running + HYROX, adaptation rules, session variety), schema with tested isolation, onboarding, on-device plan preview, iPhone development build via Xcode (free Apple ID).
+- Done: engine (running + HYROX, adaptation rules, session variety), schema with tested isolation, onboarding, plans saved server-side as versions, iPhone development build via Xcode (free Apple ID).
 - Supabase: email confirmation turned off for development; turn it back on before anyone else uses the app.
 - Verified 2026-10-16: sign-up and onboarding save to Supabase from the iPhone.
-- Next: save plans server-side (append-only versions), workout logging, adaptation in the app, UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).
+- Verified 2026-10-16: first plan built and saved by the generate-plan Edge Function, shown on the iPhone (D-022).
+- Next: workout logging, adaptation in the app, UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).

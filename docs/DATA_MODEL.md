@@ -1,6 +1,6 @@
 # Data Model
 
-Migration: `supabase/migrations/20261015000001_init.sql` (PostgreSQL 15+, Supabase-compatible).
+Migrations: `supabase/migrations/` (PostgreSQL 15+, Supabase-compatible), starting with `20261015000001_init.sql`.
 Security rules and tests: see `docs/SECURITY.md`.
 
 ## Tables
@@ -16,8 +16,8 @@ Security rules and tests: see `docs/SECURITY.md`.
 | | `race_results` | athlete | Run benchmarks and past HYROX results, timing method, conditions, splits |
 | | `fitness_assessments` | server | VDOT, paces, baselines — each with value kind (measured / calculated / estimated), confidence, source |
 | Plans | `training_plans` | server | A plan for a goal; points at its current version |
-| | `plan_versions` | server | Immutable snapshot per change: engine version, fitness basis, reason |
-| | `planned_workouts` | server | Sessions per version; `workout_key` links a session across versions |
+| | `plan_versions` | server | Immutable snapshot per change: engine version, fitness basis, reason, start date, weeks, exact engine inputs |
+| | `planned_workouts` | server | Sessions per version, with their order within a day (`position`); `workout_key` links a session across versions |
 | | `adaptation_decisions` | server | Every decision, applied or suppressed: rule + version, what changed, why, next steps, evidence, before/after |
 | Training log | `completed_workouts` | athlete / importer | Status, duration, distance, HR, RPE, soreness, fatigue, pain, splits, station results, source |
 | | `daily_recovery` | athlete / importer | HRV, resting HR, sleep — keyed by source so device baselines never mix |
@@ -33,6 +33,8 @@ Security rules and tests: see `docs/SECURITY.md`.
 
 ## Design choices
 - **Workout steps are stored as JSON (`planned_workouts.body`)**, not as rows per step. Steps are produced and validated by the engine's typed model, read as a whole, and never queried individually. Columns that *are* queried (date, type, minutes, distance, load) are real columns. Revisit if we need step-level analytics.
-- **Plans are versioned, never edited.** An adaptation writes a new `plan_versions` row with its sessions; the old version stays for the history screen.
+- **Plans are versioned, never edited** (D-022). Every change writes a new `plan_versions` row with a complete set of sessions; the old version stays for the history screen. `record_plan_version` (server only) does this in one transaction: version 1 is `generated`, later ones `regenerated` (or `adapted`, later). Sessions and weeks before the new version's `starts_on` (the Monday the rebuilt plan begins) are copied unchanged from the previous version, so a week in progress never shifts.
+- **A version can be reproduced.** `plan_versions.inputs` stores the exact engine inputs (athlete and goal) and `engine_version` the engine release. `weeks` holds each week's start date, phase, recovery flag and run target.
+- **Session ids.** `workout_key` is the session's date and type (e.g. `2026-10-27:threshold`); the engine's session id is `<training_plans.id>:<workout_key>`. One active plan per goal (unique index).
 - **Provenance everywhere.** Results have a timing method; assessments have value kind and confidence; logged data has a source.
 - **Imports are idempotent**: `(athlete_id, source, external_id)` is unique.

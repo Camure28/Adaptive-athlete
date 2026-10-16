@@ -7,8 +7,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EMPTY_ANSWERS, toSavePayload, type Division, type OnboardingAnswers } from "@/onboarding/model";
-import type { Equipment, GymType, HyroxLevel, Limitation, TrainingStatus, Weekday } from "@adaptive-athlete/engine";
-import { BackendError, type Account, type Backend, type HyroxEvent } from "./backend";
+import { planFromRecord, type Equipment, type GymType, type HyroxGoal, type HyroxLevel, type Limitation, type TrainingStatus, type WeekRecord, type Weekday, type WorkoutRow } from "@adaptive-athlete/engine";
+import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan } from "./backend";
 
 export class SupabaseBackend implements Backend {
   readonly mode = "supabase" as const;
@@ -69,6 +69,58 @@ export class SupabaseBackend implements Backend {
   async saveOnboarding(answers: OnboardingAnswers, today: string) {
     const { error } = await this.db.rpc("save_hyrox_onboarding", { p: toSavePayload(answers, today) });
     if (error) throw new BackendError("Your answers couldn't be saved. Check your connection and try again.");
+  }
+
+  async buildPlan(today: string) {
+    const { error } = await this.db.functions.invoke("generate-plan", { body: { today } });
+    if (!error) return;
+    // The function explains failures it understands (e.g. "At least 3 training days…") as { error }.
+    let message = "Your plan couldn't be built. Check your connection and try again.";
+    const response = (error as { context?: unknown }).context;
+    if (response instanceof Response) {
+      const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      if (typeof body?.error === "string") message = body.error;
+    }
+    throw new BackendError(message);
+  }
+
+  async loadPlan(): Promise<SavedPlan | null> {
+    const failed = new BackendError("Your plan couldn't be loaded. Check your connection and try again.");
+    const plan = await this.db
+      .from("training_plans")
+      .select("id, athlete_id, current_version")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (plan.error) throw failed;
+    if (!plan.data) return null;
+    const version = await this.db
+      .from("plan_versions")
+      .select("id, version, created_at, basis, weeks, inputs")
+      .eq("plan_id", plan.data.id)
+      .eq("version", plan.data.current_version)
+      .single();
+    if (version.error) throw failed;
+    const rows = await this.db
+      .from("planned_workouts")
+      .select("workout_key, scheduled_date, position, sport, session_type, title, estimated_minutes, planned_meters, planned_load, adapted_by_rule, body")
+      .eq("plan_version_id", version.data.id);
+    if (rows.error) throw failed;
+    return {
+      version: version.data.version,
+      savedAt: version.data.created_at,
+      plan: planFromRecord({
+        planId: plan.data.id,
+        athleteId: plan.data.athlete_id,
+        version: version.data.version,
+        createdAt: version.data.created_at,
+        goal: (version.data.inputs as { goal: HyroxGoal }).goal,
+        basis: version.data.basis,
+        weeks: version.data.weeks as WeekRecord[],
+        workouts: rows.data as WorkoutRow[],
+      }),
+    };
   }
 
   async loadOnboarding(): Promise<OnboardingAnswers | null> {

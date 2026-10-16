@@ -17,3 +17,5 @@ export * from "./imports/activity.js";
 export * from "./imports/healthkit.js";
 export * from "./imports/dedupe.js";
 export * from "./imports/match.js";
+export { ENGINE_VERSION, planToRecord, planFromRecord, PlanRecordError, type PlanRecord, type StoredVersion, type WeekRecord, type WorkoutRow } from "./store/record.js";
+export { inputsFromProfile, type StoredProfile } from "./store/inputs.js";

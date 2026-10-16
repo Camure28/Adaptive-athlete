@@ -1,19 +1,20 @@
 /**
- * Plan preview. The plan is generated on the device from the saved answers by the same engine that
- * will run on the server. Saving plans server-side (so adaptations have a history) is the next step;
- * until then this screen says plainly that the plan isn't stored.
+ * The athlete's plan: the current saved version (D-022). Plans are built and stored on the server
+ * from the saved answers; if this account has no plan yet, one is built on first open.
  */
 import { router } from "expo-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { generateHyroxPlan, HyroxPlanError, type PlannedWorkout, type PlanWeek, type TrainingPlan, type WorkoutStep } from "@adaptive-athlete/engine";
+import type { PlannedWorkout, PlanWeek, TrainingPlan, WorkoutStep } from "@adaptive-athlete/engine";
+import { TechLoader } from "@/components/loader";
 import { Button, Callout, Heading, Screen, Wordmark } from "@/components/ui";
+import { backend, type SavedPlan } from "@/data";
 import { dashboardStats } from "@/lib/dashboard";
 import { useDismissedNotes } from "@/lib/dismissed";
 import { distance, minutes, paceRange, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
 import { color, font, radius, space, type } from "@/lib/theme";
-import { toEngineInputs, type OnboardingAnswers, type Units } from "@/onboarding/model";
+import type { OnboardingAnswers, Units } from "@/onboarding/model";
 
 const PHASE: Record<PlanWeek["phase"], string> = { base: "Base", build: "Build", peak: "Peak", taper: "Taper" };
 const LEVEL: Record<string, string> = { first_timer: "First-timer", intermediate: "Intermediate", advanced: "Advanced", competitive: "Competitive" };
@@ -96,21 +97,46 @@ export default function PlanScreen() {
   const { answers, account } = useSession();
   const { dismissed, dismiss } = useDismissedNotes(account?.userId);
   const today = localToday();
-  const result = useMemo((): { plan: TrainingPlan } | { error: string } => {
-    try {
-      const { athlete, goal } = toEngineInputs(answers, today);
-      return { plan: generateHyroxPlan(athlete, goal, { planId: "preview", today, now: new Date().toISOString() }) };
-    } catch (e) {
-      return { error: e instanceof HyroxPlanError ? e.message : "Your answers are incomplete. Go back and finish onboarding." };
-    }
-  }, [answers, today]);
+  const [result, setResult] = useState<SavedPlan | { error: string } | null>(null);
+  const [stage, setStage] = useState(0);
+  const [attempt, setAttempt] = useState(0);
   const [openWeek, setOpenWeek] = useState(0);
   const [view, setView] = useState<"weeks" | "calendar">("weeks");
 
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        setStage(0);
+        let saved = await backend.loadPlan();
+        if (!saved) {
+          if (live) setStage(1);
+          await backend.buildPlan(today);
+          saved = await backend.loadPlan();
+        }
+        if (live) setResult(saved ?? { error: "Your plan couldn't be loaded. Try again in a moment." });
+      } catch (e) {
+        if (live) setResult({ error: e instanceof Error ? e.message : "Your plan couldn't be loaded. Try again in a moment." });
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [today, attempt]);
+
+  if (!result) return <TechLoader lines={["LOADING YOUR PLAN", "GENERATING TRAINING PLAN"]} stage={stage} />;
+
   if ("error" in result) {
     return (
-      <Screen footer={<Button title="Edit my answers" onPress={() => router.replace("/onboarding/race")} />}>
-        <Heading title="We couldn't build your plan" />
+      <Screen
+        footer={
+          <View style={{ gap: space.xs }}>
+            <Button title="Try again" onPress={() => { setResult(null); setAttempt((n) => n + 1); }} />
+            <Button kind="quiet" title="Edit my answers" onPress={() => router.replace("/onboarding/race")} />
+          </View>
+        }
+      >
+        <Heading title="We couldn't load your plan" />
         <Callout>{result.error}</Callout>
       </Screen>
     );
@@ -149,7 +175,7 @@ export default function PlanScreen() {
           ))
         : <Calendar plan={plan} today={today} units={answers.units} />}
 
-      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>Built on your phone from your answers. Saving, logging and automatic adjustments come next.</Text>
+      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>{backend.mode === "demo" ? "Demo mode: built on your phone, not saved." : `Plan version ${result.version} · saved ${shortDate(localToday(new Date(result.savedAt)))}. Logging and automatic adjustments come next.`}</Text>
     </Screen>
   );
 }
