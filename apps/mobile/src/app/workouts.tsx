@@ -40,7 +40,7 @@ export default function WorkoutsScreen() {
   const open = (c: CompletedWorkout) =>
     router.push(c.plannedWorkoutId ? { pathname: "/log", params: { id: c.plannedWorkoutId } } : { pathname: "/log", params: { id: "new", log: c.id } });
 
-  if (loading && recent.length === 0) return <TechLoader lines={["LOADING YOUR WORKOUTS"]} />;
+  if (loading && recent.length === 0) return <TechLoader lines={["Loading your workouts"]} />;
 
   return (
     <Screen

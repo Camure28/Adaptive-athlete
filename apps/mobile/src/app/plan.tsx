@@ -7,13 +7,13 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CompletedWorkout, PlannedWorkout, PlanWeek, TrainingPlan, WorkoutStep } from "@adaptive-athlete/engine";
 import { TechLoader } from "@/components/loader";
-import { Button, Callout, Heading, Screen, Wordmark } from "@/components/ui";
+import { Button, Callout, Dot, Heading, Ring, Screen, Wordmark } from "@/components/ui";
 import { backend, type SavedPlan } from "@/data";
 import { dashboardStats } from "@/lib/dashboard";
 import { useDismissedNotes } from "@/lib/dismissed";
 import { distance, minutes, paceRange, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
-import { color, font, radius, space, type } from "@/lib/theme";
+import { color, font, kind, radius, space, type } from "@/lib/theme";
 import { logBadge } from "@/logging/form";
 import type { OnboardingAnswers, Units } from "@/onboarding/model";
 
@@ -21,60 +21,65 @@ const PHASE: Record<PlanWeek["phase"], string> = { base: "Base", build: "Build",
 const LEVEL: Record<string, string> = { first_timer: "First-timer", intermediate: "Intermediate", advanced: "Advanced", competitive: "Competitive" };
 const DIVISION: Record<string, string> = { women_open: "Women Open", women_pro: "Women Pro", men_open: "Men Open", men_pro: "Men Pro" };
 const STATUS: Record<string, string> = { building: "Building up", consistent: "Training consistently", race_ready: "Race-ready" };
-const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-const stamp = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return `${DOW[d.getUTCDay()]} ${MON[d.getUTCMonth()]} ${d.getUTCDate()} ${d.getUTCFullYear()}`; };
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const utc = (iso: string) => new Date(`${iso}T00:00:00Z`);
+/** "Saturday, Feb 27" */
+const longDay = (iso: string) => { const d = utc(iso); return `${DOW[d.getUTCDay()]}, ${MON[d.getUTCMonth()]} ${d.getUTCDate()}`; };
+/** "Mon, Oct 19" */
+const shortDay = (iso: string) => { const d = utc(iso); return `${DOW[d.getUTCDay()]!.slice(0, 3)}, ${MON[d.getUTCMonth()]} ${d.getUTCDate()}`; };
 
-/** Personal banner: who they are, the race, the countdown, and this week at a glance. */
+/** Personal banner: the race, a countdown ring for the plan, this week at a glance, and what's next. */
 function Dashboard({ plan, answers, today }: { plan: TrainingPlan; answers: OnboardingAnswers; today: string }) {
   const d = dashboardStats(plan, today);
-  const tags = [answers.level && LEVEL[answers.level], answers.division && DIVISION[answers.division], answers.trainingStatus && STATUS[answers.trainingStatus]].filter(Boolean).join(" · ");
+  const chips = [answers.level && LEVEL[answers.level], answers.division && DIVISION[answers.division], answers.trainingStatus && STATUS[answers.trainingStatus]].filter((x): x is string => !!x);
   const race = answers.eventLabel || "Race day";
+  const progress = d.started ? d.weekNumber / d.totalWeeks : 0;
   return (
-    <View style={hud.card} accessibilityRole="summary">
-      {(["tl", "tr", "bl", "br"] as const).map((c) => <View key={c} style={[hud.corner, hud[c]]} />)}
-      <Text style={hud.tags} numberOfLines={1}>{tags.toUpperCase()}</Text>
-      <View style={hud.row}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={hud.race} numberOfLines={2}>{race.toUpperCase()}</Text>
-          <Text style={hud.date}>{stamp(d.raceDate)}</Text>
-        </View>
-        <View style={{ alignItems: "flex-end" }}>
-          <Text style={hud.count} accessibilityLabel={`${d.daysToRace} days to race`}>{d.daysToRace}</Text>
-          <Text style={hud.label}>DAYS TO RACE</Text>
-        </View>
+    <View accessibilityRole="summary" style={{ marginBottom: space.lg }}>
+      <Text style={type.small}>Your race</Text>
+      <Text style={[type.display, { fontSize: 28, lineHeight: 34 }]} numberOfLines={2}>{race}</Text>
+      <Text style={[type.small, { marginTop: 2 }]}>{longDay(d.raceDate)}, {d.raceDate.slice(0, 4)}</Text>
+      <View style={hud.chips}>
+        {chips.map((c) => (
+          <View key={c} style={hud.chip}>
+            <Text style={hud.chipText}>{c}</Text>
+          </View>
+        ))}
       </View>
 
-      <View style={{ gap: 6 }}>
-        <View style={hud.rowTight}>
-          <Text style={hud.label}>WEEK {String(d.weekNumber).padStart(2, "0")}/{String(d.totalWeeks).padStart(2, "0")} · {PHASE[d.week.phase].toUpperCase()}{d.week.isRecoveryWeek ? " · LIGHTER" : ""}</Text>
-          {!d.started ? <Text style={hud.label}>STARTS {stamp(d.week.startDate).slice(0, 10)}</Text> : null}
-        </View>
-        <View style={hud.strip}>
-          {plan.weeks.map((w) => (
-            <View key={w.index} style={[hud.tick, w.index < d.week.index && hud.tickDone, w.index === d.week.index && hud.tickNow, w.phase === "taper" && w.index > d.week.index && hud.tickTaper]} />
-          ))}
-        </View>
+      <View style={hud.hero}>
+        <Ring size={196} stroke={10} progress={progress}>
+          <Text style={hud.count} accessibilityLabel={`${d.daysToRace} days to race`}>{d.daysToRace}</Text>
+          <Text style={type.small}>days to go</Text>
+        </Ring>
+        <Text style={[type.label, { marginTop: space.lg }]}>
+          Week {d.weekNumber} of {d.totalWeeks}, {PHASE[d.week.phase].toLowerCase()}{d.week.isRecoveryWeek ? " (lighter week)" : ""}
+        </Text>
+        {!d.started ? <Text style={type.small}>Starts {shortDay(d.week.startDate)}</Text> : null}
       </View>
 
       <View style={hud.grid}>
-        <Stat label="THIS WEEK" value={`${d.thisWeek.sessions}`} unit="SESSIONS" sub={`${d.thisWeek.hard} hard · ${minutes(d.thisWeek.minutes)}`} />
-        <Stat label="RUN VOLUME" value={distance(d.thisWeek.runMeters, answers.units).split(" ")[0]!} unit={answers.units.toUpperCase()} sub="planned this week" />
+        <Stat label="This week" value={`${d.thisWeek.sessions}`} unit={d.thisWeek.sessions === 1 ? "session" : "sessions"} sub={`${d.thisWeek.hard} hard, ${minutes(d.thisWeek.minutes)}`} />
+        <Stat label="Running" value={distance(d.thisWeek.runMeters, answers.units).split(" ")[0]!} unit={answers.units} sub="planned this week" />
         <Stat
-          label="RACE-EFFORT PACE"
-          value={d.threshold ? paceRange(d.threshold.fastSecPerKm, d.threshold.slowSecPerKm, answers.units).replace(`/${answers.units}`, "") : "RPE"}
-          unit={d.threshold ? `/${answers.units.toUpperCase()}` : "7–8"}
+          label="Race effort"
+          value={d.threshold ? paceRange(d.threshold.fastSecPerKm, d.threshold.slowSecPerKm, answers.units).replace(`/${answers.units}`, "") : "RPE 7–8"}
+          unit={d.threshold ? `/${answers.units}` : ""}
           sub={d.threshold ? "estimated from your benchmark" : "no benchmark yet"}
-          small={!!d.threshold}
+          small
         />
-        <Stat label="FULL SIMS" value={`${d.fullSims.total}`} unit="PLANNED" sub={d.fullSims.next ? `next ${stamp(d.fullSims.next).slice(4, 10).trim()}` : "none left"} />
+        <Stat label="Full simulations" value={`${d.fullSims.total}`} unit="planned" sub={d.fullSims.next ? `next ${shortDay(d.fullSims.next).slice(5)}` : "none left"} />
       </View>
 
       {d.next ? (
         <View style={hud.next}>
-          <Text style={hud.label}>NEXT UP · {stamp(d.next.date).slice(0, 10)}</Text>
-          <Text style={hud.nextTitle} numberOfLines={2}>{d.next.title}</Text>
-          <Text style={hud.data}>{minutes(d.next.estimatedMinutes)}{d.next.plannedDistanceMeters ? ` · ${distance(d.next.plannedDistanceMeters, answers.units)}` : ""}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+            <Dot tint={kindTint(d.next)} />
+            <Text style={type.small}>Next up, {shortDay(d.next.date)}</Text>
+          </View>
+          <Text style={[type.title, { marginTop: 4 }]} numberOfLines={2}>{d.next.title}</Text>
+          <Text style={[type.small, type.figure]}>{minutes(d.next.estimatedMinutes)}{d.next.plannedDistanceMeters ? `, ${distance(d.next.plannedDistanceMeters, answers.units)}` : ""}</Text>
         </View>
       ) : null}
     </View>
@@ -84,14 +89,23 @@ function Dashboard({ plan, answers, today }: { plan: TrainingPlan; answers: Onbo
 function Stat({ label, value, unit, sub, small = false }: { label: string; value: string; unit: string; sub: string; small?: boolean }) {
   return (
     <View style={hud.stat}>
-      <Text style={hud.label}>{label}</Text>
-      <Text style={[hud.value, small && { fontSize: 18 }]} numberOfLines={1} adjustsFontSizeToFit>
+      <Text style={type.small}>{label}</Text>
+      <Text style={[hud.value, small && { fontSize: 22, lineHeight: 30 }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
-        <Text style={hud.unit}> {unit}</Text>
+        {unit ? <Text style={hud.unit}> {unit}</Text> : null}
       </Text>
-      <Text style={hud.sub} numberOfLines={2}>{sub}</Text>
+      <Text style={type.data} numberOfLines={2}>{sub}</Text>
     </View>
   );
+}
+
+/** The dot colour for a session. */
+function kindTint(w: Pick<PlannedWorkout, "sport" | "type">): string {
+  if (w.sport === "hyrox" || w.type === "race") return kind.hyrox;
+  if (w.sport === "strength") return kind.strength;
+  if (w.type === "rest") return kind.rest;
+  if (w.type === "easy_run" || w.type === "long_run" || w.type === "recovery_run" || w.type === "strides") return kind.easy;
+  return kind.hard;
 }
 
 export default function PlanScreen() {
@@ -133,7 +147,7 @@ export default function PlanScreen() {
     };
   }, [today, attempt, setPlanAndLogs, setReview]);
 
-  if (!result) return <TechLoader lines={["LOADING YOUR PLAN", "GENERATING TRAINING PLAN"]} stage={stage} />;
+  if (!result) return <TechLoader lines={["Loading your plan", "Building your plan"]} stage={stage} />;
 
   if ("error" in result) {
     return (
@@ -161,22 +175,26 @@ export default function PlanScreen() {
       <View style={nav.bar}>
         <Wordmark />
         <Pressable onPress={() => router.push("/account")} accessibilityRole="button" accessibilityLabel="Account menu" hitSlop={10} style={nav.menu}>
-          <View style={nav.lineLong} />
-          <View style={nav.lineShort} />
-          <View style={nav.lineLong} />
+          <Text style={nav.initial}>{(account?.email ?? "A").slice(0, 1).toUpperCase()}</Text>
         </Pressable>
       </View>
       <Dashboard plan={plan} answers={answers} today={today} />
-      <View style={{ marginBottom: space.md, gap: space.xs }}>
+      <View style={{ marginBottom: space.lg, gap: space.sm }}>
         {review ? (
           <Button
-            kind={questions > 0 ? "primary" : "quiet"}
-            title={questions > 0 ? `Your review · ${questions} ${questions === 1 ? "question" : "questions"}` : "Your latest review"}
+            kind={questions > 0 ? "primary" : "soft"}
+            title={questions > 0 ? `Your review: ${questions} ${questions === 1 ? "question" : "questions"}` : "Your latest review"}
             onPress={() => router.push("/review")}
           />
         ) : null}
-        <Button kind="quiet" title="Recent workouts" onPress={() => router.push("/workouts")} />
-        <Button kind="quiet" title="Log other workout" onPress={() => router.push({ pathname: "/log", params: { id: "new" } })} />
+        <View style={{ flexDirection: "row", gap: space.sm }}>
+          <View style={{ flex: 1 }}>
+            <Button kind="soft" title="Recent workouts" onPress={() => router.push("/workouts")} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button kind="soft" title="Log other workout" onPress={() => router.push({ pathname: "/log", params: { id: "new" } })} />
+          </View>
+        </View>
       </View>
       {dismissed
         ? plan.basis.notes.filter((n) => !dismissed.has(n)).map((n) => (
@@ -187,7 +205,7 @@ export default function PlanScreen() {
       <View style={nav.toggle} accessibilityRole="tablist">
         {(["weeks", "calendar"] as const).map((v) => (
           <Pressable key={v} onPress={() => setView(v)} accessibilityRole="tab" accessibilityState={{ selected: view === v }} style={[nav.tab, view === v && nav.tabOn]}>
-            <Text style={[nav.tabText, view === v && { color: color.onAccent }]}>{v === "weeks" ? "WEEKS" : "CALENDAR"}</Text>
+            <Text style={[nav.tabText, view === v && { color: color.text }]}>{v === "weeks" ? "Weeks" : "Calendar"}</Text>
           </Pressable>
         ))}
       </View>
@@ -205,7 +223,7 @@ export default function PlanScreen() {
 
 // ---- Calendar -----------------------------------------------------------------------------------
 
-const MONTH_NAME = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+const MONTH_NAME = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const isoOf = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 /** Month grid, Monday first. Each day shows its sessions as marks; tap a day to see them. */
@@ -260,8 +278,8 @@ function Calendar({ plan, today, units, logs }: { plan: TrainingPlan; today: str
             >
               <Text style={[cal.num, iso === today && cal.today, race && { color: color.onAccent }]}>{Number(iso.slice(8))}</Text>
               <View style={cal.marks}>
-                {ws.slice(0, 3).map((w) => (
-                  <View key={w.id} style={[cal.mark, markStyle(w)]} />
+                {ws.filter((w) => w.type !== "rest").slice(0, 3).map((w) => (
+                  <Dot key={w.id} tint={race ? color.onAccent : kindTint(w)} size={6} />
                 ))}
               </View>
             </Pressable>
@@ -269,80 +287,72 @@ function Calendar({ plan, today, units, logs }: { plan: TrainingPlan; today: str
         })}
       </View>
       <View style={cal.legend}>
-        <Legend style={markStyle({ sport: "hyrox", type: "compromised_run" } as PlannedWorkout)} label="HYROX" />
-        <Legend style={markStyle({ sport: "run", type: "threshold" } as PlannedWorkout)} label="HARD RUN" />
-        <Legend style={markStyle({ sport: "run", type: "easy_run" } as PlannedWorkout)} label="EASY RUN" />
-        <Legend style={markStyle({ sport: "strength", type: "strength" } as PlannedWorkout)} label="STRENGTH" />
+        <Legend tint={kind.hyrox} label="HYROX" />
+        <Legend tint={kind.hard} label="Hard run" />
+        <Legend tint={kind.easy} label="Easy run" />
+        <Legend tint={kind.strength} label="Strength" />
       </View>
 
-      <Text style={[type.eyebrow, { marginTop: space.lg, marginBottom: space.xs }]}>{shortDate(selected)}</Text>
+      <Text style={[type.label, { marginTop: space.xl, marginBottom: space.xs }]}>{longDay(selected)}</Text>
       {dayList.length ? dayList.map((w) => <Session key={w.id} w={w} units={units} log={logs[w.id]} today={today} />) : <Text style={[type.small, { paddingVertical: space.md }]}>Rest day. Nothing planned.</Text>}
     </View>
   );
 }
 
-function markStyle(w: Pick<PlannedWorkout, "sport" | "type">) {
-  if (w.sport === "hyrox" || w.type === "race") return { backgroundColor: color.accent };
-  if (w.sport === "strength") return { borderWidth: 1.5, borderColor: color.accent, backgroundColor: "transparent" };
-  if (w.type === "easy_run" || w.type === "long_run" || w.type === "recovery_run") return { backgroundColor: color.muted };
-  return { backgroundColor: color.text };
-}
-
-function Legend({ style, label }: { style: object; label: string }) {
+function Legend({ tint, label }: { tint: string; label: string }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-      <View style={[cal.mark, style]} />
-      <Text style={[type.data, { fontSize: 10 }]}>{label}</Text>
+      <Dot tint={tint} size={7} />
+      <Text style={type.data}>{label}</Text>
     </View>
   );
 }
 
 const nav = StyleSheet.create({
-  bar: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  menu: { width: 40, height: 32, alignItems: "flex-end", justifyContent: "center", gap: 5 },
-  lineLong: { width: 24, height: 2, backgroundColor: color.text },
-  lineShort: { width: 16, height: 2, backgroundColor: color.accent },
-  toggle: { flexDirection: "row", borderWidth: 1, borderColor: color.line, borderRadius: radius.control, padding: 3, marginBottom: space.md, gap: 3 },
-  tab: { flex: 1, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 4 },
-  tabOn: { backgroundColor: color.accent },
-  tabText: { fontFamily: font.mono, fontSize: 12, letterSpacing: 1.6, color: color.muted },
+  bar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.xl },
+  menu: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.surface, alignItems: "center", justifyContent: "center" },
+  initial: { fontFamily: font.semibold, fontSize: 16, color: color.text },
+  toggle: { flexDirection: "row", backgroundColor: color.surface, borderRadius: radius.pill, padding: 4, marginBottom: space.lg, gap: 4 },
+  tab: { flex: 1, minHeight: 40, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
+  tabOn: { backgroundColor: color.raised },
+  tabText: { fontFamily: font.medium, fontSize: 15, color: color.muted },
 });
 
 const cal = StyleSheet.create({
-  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.sm },
-  arrow: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: color.line, borderRadius: radius.control },
-  arrowText: { fontFamily: font.title, fontSize: 24, color: color.text, marginTop: -2 },
-  month: { fontFamily: font.mono, fontSize: 14, letterSpacing: 2, color: color.text },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
-  dow: { width: `${100 / 7}%`, textAlign: "center", fontFamily: font.mono, fontSize: 10, letterSpacing: 1, color: color.muted, paddingVertical: 6 },
-  cell: { width: `${100 / 7}%`, aspectRatio: 0.9, padding: 2 },
-  day: { borderRadius: 4, borderWidth: 1, borderColor: "transparent", alignItems: "center", justifyContent: "space-between", paddingVertical: 6 },
-  daySel: { borderColor: color.accent, backgroundColor: color.surface },
+  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.md },
+  arrow: { width: 40, height: 40, alignItems: "center", justifyContent: "center", backgroundColor: color.surface, borderRadius: 20 },
+  arrowText: { fontFamily: font.medium, fontSize: 22, color: color.text, marginTop: -2 },
+  month: { fontFamily: font.semibold, fontSize: 18, color: color.text },
+  grid: { flexDirection: "row", flexWrap: "wrap", backgroundColor: color.surface, borderRadius: radius.card, padding: space.sm },
+  dow: { width: `${100 / 7}%`, textAlign: "center", fontFamily: font.medium, fontSize: 12, color: color.faint, paddingVertical: 8 },
+  cell: { width: `${100 / 7}%`, aspectRatio: 0.92, padding: 3 },
+  day: { borderRadius: 14, alignItems: "center", justifyContent: "space-between", paddingVertical: 7 },
+  daySel: { backgroundColor: color.raised },
   dayRace: { backgroundColor: color.accent },
-  num: { fontFamily: font.mono, fontSize: 13, color: color.text },
-  today: { color: color.accent, textDecorationLine: "underline" },
-  marks: { flexDirection: "row", gap: 3, minHeight: 7 },
-  mark: { width: 7, height: 7, borderRadius: 2 },
-  legend: { flexDirection: "row", flexWrap: "wrap", gap: space.md, marginTop: space.sm },
+  num: { fontFamily: font.medium, fontSize: 15, color: color.text },
+  today: { color: color.accent, fontFamily: font.bold },
+  marks: { flexDirection: "row", gap: 3, minHeight: 6 },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: space.lg, marginTop: space.md, paddingHorizontal: space.xs },
 });
 
 function Week({ week, open, onToggle, units, logs, today }: { week: PlanWeek; open: boolean; onToggle: () => void; units: Units; logs: Record<string, CompletedWorkout>; today: string }) {
   const run = week.workouts.reduce((m, w) => m + (w.sport === "run" || w.sport === "hyrox" ? w.plannedDistanceMeters ?? 0 : 0), 0);
   const mins = week.workouts.reduce((m, w) => m + w.estimatedMinutes, 0);
   return (
-    <View style={[st.week, open && st.weekOpen]}>
+    <View style={st.week}>
       <Pressable onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }} style={st.weekHead}>
-        <View style={{ flex: 1 }}>
-          <Text style={type.eyebrow}>
-            {PHASE[week.phase]}
-            {week.isRecoveryWeek ? " · lighter week" : ""}
-          </Text>
+        <View style={{ flex: 1, gap: 2 }}>
           <Text style={type.title}>Week {week.index + 1}</Text>
+          <Text style={type.small}>
+            {PHASE[week.phase]}
+            {week.isRecoveryWeek ? ", lighter week" : ""}
+          </Text>
         </View>
-        <View style={{ alignItems: "flex-end" }}>
+        <View style={{ alignItems: "flex-end", gap: 2 }}>
           <Text style={[type.label, type.figure]}>{distance(run, units)} running</Text>
           <Text style={[type.small, type.figure]}>{minutes(mins)} total</Text>
         </View>
+        <Text style={[st.chev, open && st.chevOpen]}>›</Text>
       </Pressable>
       {open ? (
         <View style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>
@@ -355,33 +365,33 @@ function Week({ week, open, onToggle, units, logs, today }: { week: PlanWeek; op
   );
 }
 
-const RUN_TAG = { label: "Run", bg: color.raised, fg: color.text };
-const TAG: Partial<Record<PlannedWorkout["sport"], { label: string; bg: string; fg: string }>> = {
-  run: RUN_TAG,
-  trail_run: RUN_TAG,
-  hyrox: { label: "HYROX", bg: color.accent, fg: color.onAccent },
-  strength: { label: "Strength", bg: color.accentSoft, fg: color.accent },
-};
+const KIND_LABEL: Partial<Record<PlannedWorkout["sport"], string>> = { run: "Run", trail_run: "Run", hyrox: "HYROX", strength: "Strength" };
 
 function Session({ w, units, log, today }: { w: PlannedWorkout; units: Units; log?: CompletedWorkout; today?: string }) {
   const [open, setOpen] = useState(false);
   const key = w.type === "race" || w.type.endsWith("simulation");
-  const tag = TAG[w.sport] ?? RUN_TAG;
+  const label = w.type === "rest" ? "Rest" : (KIND_LABEL[w.sport] ?? "Session");
   return (
     <View style={st.session}>
-      <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={{ flexDirection: "row", gap: space.md }}>
-        <Text style={[type.small, type.figure, { width: 84, paddingTop: 3 }]}>{shortDate(w.date)}</Text>
+      <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+        <View style={[st.badge, key && { backgroundColor: color.accentSoft }]}>
+          <Dot tint={kindTint(w)} size={10} />
+        </View>
         <View style={{ flex: 1 }}>
-          <Text style={[type.title, { fontSize: 19, lineHeight: 23 }, key && { color: color.accent }]}>{w.title}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: 4 }}>
-            <View style={[st.tag, { backgroundColor: tag.bg }]}>
-              <Text style={[type.eyebrow, { fontSize: 10, lineHeight: 14, color: tag.fg }]}>{tag.label}</Text>
-            </View>
-            <Text style={[type.small, type.figure]}>{minutes(w.estimatedMinutes)}</Text>
-            {log ? <Text style={[type.eyebrow, { fontSize: 10, lineHeight: 14, color: log.status === "skipped" ? color.muted : color.accent }]}>{logBadge(log)}</Text> : null}
+          <Text style={[type.small, type.figure]}>{shortDay(w.date)}</Text>
+          <Text style={[st.sessionTitle, key && { color: color.accent }]}>{w.title}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: 2 }}>
+            <Text style={[type.small, type.figure]}>
+              {label}, {minutes(w.estimatedMinutes)}
+            </Text>
+            {log ? (
+              <View style={[st.logged, log.status === "skipped" && { backgroundColor: color.raised }]}>
+                <Text style={[st.loggedText, log.status === "skipped" && { color: color.muted }]}>{logBadge(log)}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
-        <Text style={[type.title, { color: color.muted }]}>{open ? "−" : "+"}</Text>
+        <Text style={[st.chev, open && st.chevOpen]}>›</Text>
       </Pressable>
       {open ? (
         <View style={{ marginTop: space.md, gap: space.md }}>
@@ -467,42 +477,29 @@ function Line({ children, accent = color.accent }: { children: ReactNode; accent
 
 const minutesSeconds = (sec: number): string => (sec < 120 ? `${Math.round(sec)} s` : sec % 60 === 0 ? `${sec / 60} min` : `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`);
 
-const C = 12;
 const hud = StyleSheet.create({
-  card: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line, borderRadius: 4, padding: space.lg, gap: space.lg, marginBottom: space.lg },
-  corner: { position: "absolute", width: C, height: C, borderColor: color.accent },
-  tl: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
-  tr: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
-  bl: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
-  br: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
-  tags: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1.2, color: color.accent },
-  row: { flexDirection: "row", alignItems: "flex-end", gap: space.md },
-  rowTight: { flexDirection: "row", justifyContent: "space-between", gap: space.sm },
-  race: { fontFamily: font.display, fontSize: 30, lineHeight: 32, letterSpacing: 0.5, color: color.text },
-  date: { fontFamily: font.mono, fontSize: 12, letterSpacing: 1, color: color.muted, marginTop: 4 },
-  count: { fontFamily: font.monoBold, fontSize: 52, lineHeight: 54, color: color.accent, letterSpacing: -2 },
-  label: { fontFamily: font.mono, fontSize: 10, letterSpacing: 1.4, color: color.muted },
-  strip: { flexDirection: "row", gap: 2 },
-  tick: { flex: 1, height: 8, backgroundColor: color.raised },
-  tickDone: { backgroundColor: "#6B5A1C" },
-  tickNow: { backgroundColor: color.accent },
-  tickTaper: { backgroundColor: color.line },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.md },
+  chip: { backgroundColor: color.surface, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6 },
+  chipText: { fontFamily: font.medium, fontSize: 13, color: color.muted },
+  hero: { alignItems: "center", backgroundColor: color.surface, borderRadius: radius.card, paddingVertical: 28, marginTop: space.xl, marginBottom: space.sm },
+  count: { fontFamily: font.semibold, fontSize: 56, lineHeight: 62, letterSpacing: -1.5, color: color.text },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  stat: { flexBasis: "47%", flexGrow: 1, backgroundColor: color.bg, borderRadius: 4, padding: space.md, gap: 2, minWidth: 0 },
-  value: { fontFamily: font.monoBold, fontSize: 24, lineHeight: 30, color: color.text },
-  unit: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.accent },
-  sub: { fontFamily: font.regular, fontSize: 12, lineHeight: 16, color: color.muted },
-  next: { borderLeftWidth: 3, borderLeftColor: color.accent, paddingLeft: space.md, gap: 2 },
-  nextTitle: { fontFamily: font.title, fontSize: 20, lineHeight: 24, color: color.text },
-  data: { fontFamily: font.mono, fontSize: 12, color: color.muted },
+  stat: { flexBasis: "47%", flexGrow: 1, backgroundColor: color.surface, borderRadius: radius.row, paddingVertical: space.lg, paddingHorizontal: space.lg, gap: 2, minWidth: 0 },
+  value: { fontFamily: font.semibold, fontSize: 28, lineHeight: 36, letterSpacing: -0.5, color: color.text },
+  unit: { fontFamily: font.regular, fontSize: 15, letterSpacing: 0, color: color.muted },
+  next: { backgroundColor: color.surface, borderRadius: radius.row, padding: space.lg, marginTop: space.sm },
 });
 
 const st = StyleSheet.create({
-  week: { marginBottom: space.sm, borderRadius: radius.row, borderWidth: 1, borderColor: color.line },
-  weekOpen: { backgroundColor: color.surface, borderColor: color.surface },
-  weekHead: { padding: space.lg, flexDirection: "row", alignItems: "flex-end" },
-  session: { borderTopWidth: 1, borderTopColor: color.bg, paddingVertical: space.md },
-  tag: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  week: { marginBottom: space.sm, borderRadius: radius.row, backgroundColor: color.surface, overflow: "hidden" },
+  weekHead: { paddingVertical: space.lg, paddingHorizontal: space.lg, flexDirection: "row", alignItems: "center", gap: space.md },
+  chev: { fontFamily: font.medium, fontSize: 22, lineHeight: 24, color: color.faint, transform: [{ rotate: "90deg" }] },
+  chevOpen: { transform: [{ rotate: "-90deg" }] },
+  session: { paddingVertical: space.md },
+  sessionTitle: { fontFamily: font.semibold, fontSize: 17, lineHeight: 23, color: color.text },
+  badge: { width: 40, height: 40, borderRadius: 20, backgroundColor: color.raised, alignItems: "center", justifyContent: "center" },
+  logged: { backgroundColor: color.accentSoft, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: 2 },
+  loggedText: { fontFamily: font.medium, fontSize: 12, color: color.accent },
   work: { gap: space.sm },
-  line: { borderLeftWidth: 3, paddingLeft: space.md, paddingVertical: 2 },
+  line: { borderLeftWidth: 2, borderRadius: 1, paddingLeft: space.md, paddingVertical: 2 },
 });

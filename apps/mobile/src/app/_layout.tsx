@@ -1,10 +1,7 @@
-import { BarlowCondensed_600SemiBold } from "@expo-google-fonts/barlow-condensed/600SemiBold";
-import { BarlowCondensed_700Bold } from "@expo-google-fonts/barlow-condensed/700Bold";
-import { Barlow_400Regular } from "@expo-google-fonts/barlow/400Regular";
-import { Barlow_500Medium } from "@expo-google-fonts/barlow/500Medium";
-import { Barlow_600SemiBold } from "@expo-google-fonts/barlow/600SemiBold";
-import { JetBrainsMono_500Medium } from "@expo-google-fonts/jetbrains-mono/500Medium";
-import { JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono/700Bold";
+import { Outfit_400Regular } from "@expo-google-fonts/outfit/400Regular";
+import { Outfit_500Medium } from "@expo-google-fonts/outfit/500Medium";
+import { Outfit_600SemiBold } from "@expo-google-fonts/outfit/600SemiBold";
+import { Outfit_700Bold } from "@expo-google-fonts/outfit/700Bold";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -15,16 +12,13 @@ import { color } from "@/lib/theme";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    BarlowCondensed_600SemiBold,
-    BarlowCondensed_700Bold,
-    Barlow_400Regular,
-    Barlow_500Medium,
-    Barlow_600SemiBold,
-    JetBrainsMono_500Medium,
-    JetBrainsMono_700Bold,
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
   });
   // A brief blank page while fonts load; if loading fails the system font is used instead.
-  if (!loaded && !error) return <TechLoader systemFont lines={["INITIALISING"]} />;
+  if (!loaded && !error) return <TechLoader systemFont lines={["Starting up"]} />;
   return (
     <SafeAreaProvider>
       <SessionProvider>

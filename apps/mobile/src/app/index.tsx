@@ -39,7 +39,7 @@ export default function Index() {
     };
   }, [attempt, setAccount, setAnswers]);
 
-  if (!error) return <TechLoader lines={["AUTHENTICATING", "LOADING ATHLETE PROFILE", "OPENING YOUR PLAN"]} stage={stage} />;
+  if (!error) return <TechLoader lines={["Signing you in", "Loading your profile", "Opening your plan"]} stage={stage} />;
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space.xl, backgroundColor: color.bg }}>
       <Text style={[type.body, { textAlign: "center", marginBottom: space.lg }]}>{error}</Text>

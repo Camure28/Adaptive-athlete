@@ -6,6 +6,10 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (design pass)
+- **Done:** a calmer, rounded visual style (D-027). Look and styling only; no feature, data or engine changes. Outfit replaces the Barlow and JetBrains Mono fonts, and those font packages are removed. New tokens are in `lib/theme.ts`, including `kind` colours for session types. The shared components are restyled: pill buttons, a new `soft` button, borderless choices and fields, a smooth progress bar, and dot callouts. New `Ring` (progress ring drawn with plain views, so no native rebuild) and `Dot` components. The loader is a calm spinning arc. The plan dashboard, calendar, week and session rows, and account screen are restyled, and all loader copy is sentence case. Checked in the web preview (onboarding, plan, calendar, account, log). The ring was checked at 62% progress.
+- **Open (Cameron):** `git pull`, restart `npx expo start`, and look at it on the phone. A reload is enough, no rebuild needed. Coach feedback on the session dot colours is welcome.
+
 ## 2026-10-16 — claude.ai Project chat (release and TestFlight setup)
 - **Done:** the app can run on Cameron's iPhone without the Mac: `pnpm ios:release` installs a Release build with the code inside (free Apple ID, still 7 days). TestFlight is ready to switch on: `apps/mobile/eas.json` (development, preview and production profiles, each with its own EAS environment), `pnpm testflight` (cloud build and upload), and the export-compliance flag in `app.json` (HTTPS only). Steps, tester invites and a pre-tester checklist are in `docs/RELEASE.md`. Commands are checked against Expo's docs. Not run yet: release builds need the Mac.
 - **Open (Cameron):** try `pnpm ios:release` with the phone plugged in. When ready: Apple Developer Program, Expo account, `eas init`, two `eas env:set` commands (`RELEASE.md` §2). Before testers: the checklist in `RELEASE.md` §3 (email confirmation, privacy policy, account deletion, feedback link, real icon).

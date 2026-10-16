@@ -42,7 +42,7 @@ export default function OnboardingStep() {
     }
   };
 
-  if (busy) return <TechLoader lines={["SAVING ATHLETE PROFILE", "GENERATING TRAINING PLAN"]} stage={stage} />;
+  if (busy) return <TechLoader lines={["Saving your answers", "Building your plan"]} stage={stage} />;
 
   return (
     <Screen

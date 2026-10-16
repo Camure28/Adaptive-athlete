@@ -39,7 +39,7 @@ export default function AccountScreen() {
     <Screen>
       <View style={st.top}>
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back to plan" hitSlop={12} style={st.back}>
-          <Text style={st.backText}>{"‹"} PLAN</Text>
+          <Text style={st.backText}>{"‹"} Plan</Text>
         </Pressable>
       </View>
       <Text style={type.display} accessibilityRole="header">Account</Text>
@@ -65,7 +65,7 @@ export default function AccountScreen() {
         <Row label="Sign out" onPress={signOut} danger />
       </Section>
 
-      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>ADAPTIVE//ATHLETE · v{Constants.expoConfig?.version ?? "1.0.0"}{backend.mode === "demo" ? " · DEMO" : ""}</Text>
+      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>Adaptive Athlete, version {Constants.expoConfig?.version ?? "1.0.0"}{backend.mode === "demo" ? " (demo)" : ""}</Text>
     </Screen>
   );
 }
@@ -87,7 +87,7 @@ function Row({ label, detail, value, onPress, soon = false, danger = false }: { 
         {detail ? <Text style={type.small}>{detail}</Text> : null}
       </View>
       {value ? <Text style={st.value}>{value}</Text> : null}
-      {soon ? <Text style={st.soon}>SOON</Text> : null}
+      {soon ? <Text style={st.soon}>Soon</Text> : null}
       {onPress && !soon ? <Text style={st.chev}>›</Text> : null}
     </View>
   );
@@ -102,10 +102,10 @@ function Row({ label, detail, value, onPress, soon = false, danger = false }: { 
 const st = StyleSheet.create({
   top: { flexDirection: "row", marginBottom: space.lg },
   back: { paddingVertical: space.xs },
-  backText: { fontFamily: font.mono, fontSize: 12, letterSpacing: 1.4, color: color.accent },
-  group: { backgroundColor: color.surface, borderRadius: radius.row, borderWidth: 1, borderColor: color.line, overflow: "hidden" },
+  backText: { fontFamily: font.medium, fontSize: 15, color: color.muted },
+  group: { backgroundColor: color.surface, borderRadius: radius.row, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md, paddingHorizontal: space.lg, minHeight: 56, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.line },
-  value: { fontFamily: font.mono, fontSize: 12, letterSpacing: 0.6, color: color.accent },
-  soon: { fontFamily: font.mono, fontSize: 10, letterSpacing: 1.4, color: color.muted, borderWidth: 1, borderColor: color.line, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 3 },
+  value: { fontFamily: font.medium, fontSize: 14, color: color.accent },
+  soon: { fontFamily: font.medium, fontSize: 12, color: color.muted, backgroundColor: color.raised, paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill, overflow: "hidden" },
   chev: { fontFamily: font.title, fontSize: 24, color: color.muted },
 });

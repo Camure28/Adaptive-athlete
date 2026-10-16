@@ -148,3 +148,14 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Paywall:** D-013 makes adaptation paid, but the pilot is free and there are no subscriptions yet, so every athlete gets every rule. Before launch the server must limit non-safety rules to subscribers; safety rules are never paywalled.
 **Awaiting coach review:** the answer options and how follow-up answers are read (`apps/mobile/src/logging/questions.ts`, `ADAPTATION_ENGINE.md` §11).
 **Status:** Accepted (product owner approved the approach and the engine fix 2026-10-16). Migration `20261016000008_adaptation_runs.sql`; functions deployed by Cameron with `pnpm functions:deploy`.
+
+## D-027 — Calmer, rounded visual style (2026-10-16)
+**Decision:** The app keeps every feature and its black-and-yellow identity but drops the "cockpit" look of D-020 for a calmer one, after the product owner shared a mobility app he likes as a reference for feel (not to copy):
+- **Type:** one friendly geometric typeface (Outfit) in sentence case everywhere. No all-caps, condensed or monospace text.
+- **Surfaces:** a slate-ink background (#12151B) and borderless, rounded, tone-on-tone cards (radius 20–24); pill-shaped buttons and chips.
+- **Colour:** yellow is kept for actions, selection and progress only. Session types are small coloured dots: HYROX yellow, hard run orange, easy run mint, strength lavender.
+- **Plan screen:** race name with level/division/status chips; a progress ring (weeks through the plan) around the days-to-go countdown; soft 2×2 stat tiles; a "next up" card; secondary actions as two side-by-side pills; weeks as cards with a chevron; sessions with a coloured badge and plain-language meta.
+- **Loading screens:** a calm spinning arc with one plain status line, replacing the scanner and corner brackets.
+**Why:** The product owner found the cockpit style robotic and cluttered and wanted a smoother, less busy feel. Supersedes the visual part of D-020 (colours, fonts, loaders); D-020's dashboard content stays.
+**Status:** Built 2026-10-16 (claude.ai Project chat), app only; awaiting the product owner's review on the phone.
+

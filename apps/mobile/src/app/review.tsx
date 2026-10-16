@@ -61,7 +61,7 @@ export default function ReviewScreen() {
     }
   };
 
-  if (busy) return <TechLoader lines={["READING YOUR LOGS", "CHECKING THE RULES", "UPDATING YOUR PLAN"]} />;
+  if (busy) return <TechLoader lines={["Reading your logs", "Checking your training", "Updating your plan"]} />;
 
   const footer = <Button title="Back to my plan" onPress={() => (router.canGoBack() ? router.back() : router.replace("/plan"))} />;
 

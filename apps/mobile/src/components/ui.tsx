@@ -28,7 +28,7 @@ export function Screen({ children, footer }: { children: ReactNode; footer?: Rea
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         {backend.mode === "demo" ? (
           <View style={s.demo} accessibilityRole="alert">
-            <Text style={s.demoText}>DEMO MODE · NOTHING YOU ENTER IS SAVED</Text>
+            <Text style={s.demoText}>Demo mode: nothing you enter is saved</Text>
           </View>
         ) : null}
         <ScrollTo.Provider value={reveal}>
@@ -48,7 +48,7 @@ export function Screen({ children, footer }: { children: ReactNode; footer?: Rea
   );
 }
 
-/** Onboarding progress drawn as a lane: one segment per step, filled up to the current one. */
+/** Onboarding progress: one smooth bar, with the step count beside it. */
 export function Lane({ total, current }: { total: number; current: number }) {
   return (
     <View
@@ -57,20 +57,55 @@ export function Lane({ total, current }: { total: number; current: number }) {
       accessibilityLabel={`Step ${current + 1} of ${total}`}
       accessibilityValue={{ min: 1, max: total, now: current + 1 }}
     >
-      {Array.from({ length: total }, (_, i) => (
-        <View key={i} style={[s.laneSeg, i <= current && s.laneSegOn]} />
-      ))}
+      <View style={s.laneTrack}>
+        <View style={[s.laneFill, { width: `${((current + 1) / total) * 100}%` }]} />
+      </View>
+      <Text style={[type.data, type.figure]}>
+        {current + 1} of {total}
+      </Text>
     </View>
   );
 }
 
-/** Brand mark: condensed wordmark with a signal-yellow divider. */
+/** Brand mark: the name, set quietly. */
 export function Wordmark() {
   return (
-    <Text style={s.mark} accessibilityRole="header" accessibilityLabel="Adaptive Athlete">
-      ADAPTIVE<Text style={{ color: color.accent }}>//</Text>ATHLETE
+    <Text style={s.mark} accessibilityRole="header">
+      Adaptive Athlete
     </Text>
   );
+}
+
+/**
+ * A progress ring drawn with plain views (no native drawing library, so no rebuild needed).
+ * Two clipped halves each rotate a half-ring into view; `progress` runs 0–1 clockwise from the top.
+ */
+export function Ring({ size, stroke, progress, children }: { size: number; stroke: number; progress: number; children?: ReactNode }) {
+  const p = Math.max(0, Math.min(1, progress));
+  const half = size / 2;
+  const ring = { width: size, height: size, borderRadius: half, borderWidth: stroke, borderColor: color.accent };
+  const side = (which: "left" | "right", deg: number) => (
+    <View style={{ position: "absolute", top: 0, [which]: 0, width: half, height: size, overflow: "hidden" }}>
+      <View style={{ position: "absolute", top: 0, left: which === "right" ? -half : 0, width: size, height: size, transform: [{ rotate: `${deg}deg` }] }}>
+        <View style={{ position: "absolute", top: 0, left: which === "right" ? 0 : half, width: half, height: size, overflow: "hidden" }}>
+          <View style={[ring, { position: "absolute", top: 0, left: which === "right" ? 0 : -half }]} />
+        </View>
+      </View>
+    </View>
+  );
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <View style={[ring, { position: "absolute", borderColor: color.raised }]} />
+      {p > 0 ? side("right", Math.min(p, 0.5) * 360) : null}
+      {p > 0.5 ? side("left", (p - 0.5) * 360) : null}
+      {children}
+    </View>
+  );
+}
+
+/** A small coloured dot (session kinds, status). */
+export function Dot({ tint, size = 8 }: { tint: string; size?: number }) {
+  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: tint }} />;
 }
 
 export function Heading({ title, detail }: { title: string; detail?: string }) {
@@ -186,27 +221,30 @@ export function Stepper({ value, onChange, step, min, max, unit, label }: { valu
   return (
     <View style={s.stepper} accessibilityLabel={label}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Less ${label}`} onPress={() => onChange(Math.max(min, value - step))} style={s.stepBtn}>
-        <Text style={type.title}>−</Text>
+        <Text style={[type.title, { color: color.muted }]}>−</Text>
       </Pressable>
       <Text style={[type.title, type.figure, { minWidth: 96, textAlign: "center" }]}>
         {value} {unit}
       </Text>
       <Pressable accessibilityRole="button" accessibilityLabel={`More ${label}`} onPress={() => onChange(Math.min(max, value + step))} style={s.stepBtn}>
-        <Text style={type.title}>+</Text>
+        <Text style={[type.title, { color: color.muted }]}>+</Text>
       </Pressable>
     </View>
   );
 }
 
-export function Button({ title, onPress, kind = "primary", busy = false }: { title: string; onPress: () => void; kind?: "primary" | "quiet"; busy?: boolean }) {
+/** primary: yellow pill. soft: a quiet card-coloured pill. quiet: text only. */
+export function Button({ title, onPress, kind = "primary", busy = false }: { title: string; onPress: () => void; kind?: "primary" | "soft" | "quiet"; busy?: boolean }) {
+  const box = kind === "primary" ? s.btn : kind === "soft" ? s.btnSoft : s.btnQuiet;
+  const text = kind === "primary" ? s.btnText : kind === "soft" ? s.btnSoftText : s.btnQuietText;
   return (
     <Pressable
       onPress={busy ? undefined : onPress}
       accessibilityRole="button"
       accessibilityState={{ busy }}
-      style={({ pressed }) => [kind === "primary" ? s.btn : s.btnQuiet, pressed && { opacity: 0.85 }]}
+      style={({ pressed }) => [box, pressed && { opacity: 0.8, transform: [{ scale: 0.99 }] }]}
     >
-      <Text style={kind === "primary" ? s.btnText : s.btnQuietText}>{busy ? "Working…" : title}</Text>
+      <Text style={text}>{busy ? "Working…" : title}</Text>
     </Pressable>
   );
 }
@@ -214,8 +252,9 @@ export function Button({ title, onPress, kind = "primary", busy = false }: { tit
 /** A highlighted note. With `onDismiss` it gets a close button (safety notes should never be dismissible). */
 export function Callout({ children, tone = "note", onDismiss }: { children: ReactNode; tone?: "note" | "safety"; onDismiss?: () => void }) {
   return (
-    <View style={[s.callout, tone === "safety" && { backgroundColor: color.safetySoft, borderLeftColor: color.safety }, onDismiss && { flexDirection: "row", gap: space.sm }]}>
-      <Text style={[type.small, { color: color.text }, onDismiss && { flex: 1 }]}>{children}</Text>
+    <View style={[s.callout, tone === "safety" && { backgroundColor: color.safetySoft }, onDismiss && { flexDirection: "row", gap: space.sm }]}>
+      <View style={[s.calloutDot, tone === "safety" && { backgroundColor: color.safety }]} />
+      <Text style={[type.small, { color: color.text, flex: 1 }]}>{children}</Text>
       {onDismiss ? (
         <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={12} style={s.dismiss}>
           <Text style={s.dismissText}>×</Text>
@@ -227,45 +266,49 @@ export function Callout({ children, tone = "note", onDismiss }: { children: Reac
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: color.bg },
-  content: { padding: space.lg, paddingBottom: space.xxl },
+  content: { paddingHorizontal: 20, paddingTop: space.lg, paddingBottom: 40 },
   column: { width: "100%", maxWidth: 560, alignSelf: "center" },
-  footer: { padding: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.line, backgroundColor: color.bg },
-  mark: { fontFamily: font.display, fontSize: 18, letterSpacing: 3, color: color.text, marginBottom: space.xl },
-  demo: { backgroundColor: color.panel, paddingVertical: space.sm, paddingHorizontal: space.lg },
-  demoText: { ...type.data, fontSize: 11, color: color.accent, textAlign: "center" },
-  lane: { flexDirection: "row", gap: 4, marginBottom: space.xl },
-  laneSeg: { flex: 1, height: 4, borderRadius: 1, backgroundColor: color.line },
-  laneSegOn: { backgroundColor: color.accent },
+  footer: { paddingHorizontal: 20, paddingTop: space.md, paddingBottom: space.lg, backgroundColor: color.bg },
+  mark: { fontFamily: font.semibold, fontSize: 17, letterSpacing: -0.2, color: color.text, marginBottom: space.xl },
+  demo: { alignSelf: "center", backgroundColor: color.accentSoft, paddingVertical: 6, paddingHorizontal: space.md, borderRadius: radius.pill, marginTop: space.xs },
+  demoText: { ...type.data, fontSize: 12, color: color.accent, textAlign: "center" },
+  lane: { flexDirection: "row", alignItems: "center", gap: space.md, marginBottom: space.xl },
+  laneTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: color.raised, overflow: "hidden" },
+  laneFill: { height: 6, borderRadius: 3, backgroundColor: color.accent },
   error: { ...type.small, color: color.safety, marginTop: space.sm },
   choice: {
     flexDirection: "row",
     alignItems: "center",
     gap: space.md,
-    paddingVertical: space.md,
+    paddingVertical: 14,
     paddingHorizontal: space.lg,
-    borderRadius: radius.row,
-    borderWidth: 1,
-    borderColor: color.line,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: color.surface,
+    backgroundColor: color.surface,
     marginBottom: space.sm,
-    minHeight: 52,
+    minHeight: 56,
   },
   choiceOn: { borderColor: color.accent, backgroundColor: color.accentSoft },
-  dot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
+  dot: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: color.faint, alignItems: "center", justifyContent: "center" },
   dotFill: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.accent },
-  box: { width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
-  boxTick: { width: 10, height: 10, borderRadius: 2, backgroundColor: color.accent },
+  box: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: color.faint, alignItems: "center", justifyContent: "center" },
+  boxTick: { width: 10, height: 10, borderRadius: 3, backgroundColor: color.accent },
   markOn: { borderColor: color.accent },
   pills: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  pill: { minWidth: 48, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.line, alignItems: "center", justifyContent: "center", backgroundColor: color.surface },
-  pillOn: { backgroundColor: color.accent, borderColor: color.accent },
-  field: { ...type.body, minWidth: 0, minHeight: 48, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.line, backgroundColor: color.surface },
+  pill: { minWidth: 52, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: color.surface },
+  pillOn: { backgroundColor: color.accent },
+  field: { ...type.body, minWidth: 0, minHeight: 52, paddingHorizontal: space.lg, borderRadius: radius.control, borderWidth: 1.5, borderColor: color.surface, backgroundColor: color.surface },
   stepper: { flexDirection: "row", alignItems: "center", gap: space.md },
-  stepBtn: { width: 48, height: 48, borderRadius: radius.control, borderWidth: 1, borderColor: color.line, backgroundColor: color.surface, alignItems: "center", justifyContent: "center" },
-  btn: { minHeight: 54, borderRadius: radius.control, backgroundColor: color.accent, alignItems: "center", justifyContent: "center" },
-  btnText: { fontFamily: font.title, fontSize: 19, letterSpacing: 1.6, textTransform: "uppercase", color: color.onAccent },
-  btnQuietText: { fontFamily: font.semibold, fontSize: 15, letterSpacing: 0.4, color: color.accent },
+  stepBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.surface, alignItems: "center", justifyContent: "center" },
+  btn: { minHeight: 56, borderRadius: radius.pill, backgroundColor: color.accent, alignItems: "center", justifyContent: "center", paddingHorizontal: space.xl },
+  btnText: { fontFamily: font.semibold, fontSize: 17, color: color.onAccent },
+  btnSoft: { minHeight: 52, borderRadius: radius.pill, backgroundColor: color.surface, alignItems: "center", justifyContent: "center", paddingHorizontal: space.lg },
+  btnSoftText: { fontFamily: font.medium, fontSize: 16, color: color.text },
+  btnQuietText: { fontFamily: font.medium, fontSize: 16, color: color.muted },
   btnQuiet: { minHeight: 44, alignItems: "center", justifyContent: "center" },
   dismiss: { width: 24, height: 24, alignItems: "center", justifyContent: "center", marginTop: -2 },
   dismissText: { fontFamily: font.regular, fontSize: 22, lineHeight: 24, color: color.muted },
-  callout: { backgroundColor: color.panel, padding: space.md, borderRadius: radius.row, marginBottom: space.lg, borderLeftWidth: 3, borderLeftColor: color.accent },
+  callout: { flexDirection: "row", alignItems: "flex-start", gap: space.md, backgroundColor: color.panel, paddingVertical: 14, paddingHorizontal: space.lg, borderRadius: 18, marginBottom: space.lg },
+  calloutDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: color.accent, marginTop: 7 },
 });

@@ -6,7 +6,7 @@ import { backend, type HyroxEvent } from "@/data";
 import { resultsProvider } from "@/data/results";
 import { Button, Callout, Choice, Field, Heading, Pills, Question, Stepper } from "@/components/ui";
 import { localToday } from "@/lib/session";
-import { color, radius, space, type } from "@/lib/theme";
+import { color, space, type } from "@/lib/theme";
 import {
   applyGymTypes,
   doublesQuestionApplies,
@@ -209,7 +209,7 @@ function PastResult({ a, update, errors }: { a: OnboardingAnswers; update: StepP
 }
 
 const st = {
-  event: { padding: space.md, borderRadius: radius.row, borderWidth: 1, borderColor: color.line, backgroundColor: color.surface, marginBottom: space.sm, gap: 2 },
+  event: { paddingVertical: 14, paddingHorizontal: space.lg, borderRadius: 18, backgroundColor: color.surface, marginBottom: space.sm, gap: 2 },
   eventOn: { borderColor: color.accent, backgroundColor: color.accentSoft },
   grid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: space.sm },
   cell: { flexBasis: "47%" as const, flexGrow: 1 },

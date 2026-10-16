@@ -1,54 +1,66 @@
 /**
- * Visual tokens: a dark performance cockpit. Near-black surfaces, signal yellow for action and
- * live data, cool greys for everything secondary. Red is reserved for pain and safety only.
+ * Visual tokens (D-027): calm and rounded. A deep slate-ink background instead of pure black,
+ * tone-on-tone cards without borders, one friendly geometric typeface in sentence case, and
+ * signal yellow kept for actions and progress only. Red is reserved for pain and safety.
  * One deliberate dark theme (the app doesn't follow the phone's light/dark setting).
  */
 export const color = {
-  bg: "#0A0B0D", // page
-  surface: "#14161A", // cards, inputs
-  raised: "#1C1F24", // selected rows, chips
-  line: "#2A2E35", // borders and dividers
-  text: "#F2F3EF", // primary text
-  muted: "#9AA1AA", // secondary text
-  accent: "#FFC400", // signal yellow: primary action, selection, progress, live figures
-  accentSoft: "#2B2410", // selected background
-  onAccent: "#0A0B0D", // text on yellow
-  safety: "#FF5468", // pain / safety only
-  safetySoft: "#3A1419",
-  panel: "#191B10", // neutral callouts (assumptions, demo mode)
+  bg: "#12151B", // page: slate ink
+  surface: "#1B1F27", // cards, inputs
+  raised: "#262B35", // selected rows, chips, pressed
+  line: "#2F3541", // the rare divider or track
+  text: "#F3F4F6", // primary text
+  muted: "#98A1AF", // secondary text
+  faint: "#646D7B", // placeholders, tertiary
+  accent: "#FFC93C", // signal yellow: primary action, selection, progress
+  accentSoft: "#2B281C", // selected background
+  onAccent: "#17140A", // text on yellow
+  safety: "#FF6B7A", // pain / safety only
+  safetySoft: "#3A1E25",
+  panel: "#1B1F27", // neutral callouts (same tone as cards)
+} as const;
+
+/** Session colours: small dots and marks only, never large fills. */
+export const kind = {
+  hyrox: color.accent,
+  hard: "#FF9B5E", // threshold, race pace, intervals
+  easy: "#6FD3B5", // easy, long and recovery runs
+  strength: "#A99BFF",
+  rest: color.faint,
 } as const;
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
 
 /**
- * Type: Barlow Condensed for titles (athletic, compact), Barlow for everything else.
- * Three voices on a session: the title (condensed, bold), the work (semibold, figures line up),
- * and the explanation (regular, quieter colour). Custom fonts set the weight via the family.
+ * Type: Outfit throughout (round, geometric, easy to read on the move), sentence case everywhere.
+ * Hierarchy comes from size and weight, not capitals or a second typeface.
  */
 export const font = {
-  mono: "JetBrainsMono_500Medium",
-  monoBold: "JetBrainsMono_700Bold",
-  display: "BarlowCondensed_700Bold",
-  title: "BarlowCondensed_600SemiBold",
-  regular: "Barlow_400Regular",
-  medium: "Barlow_500Medium",
-  semibold: "Barlow_600SemiBold",
+  regular: "Outfit_400Regular",
+  medium: "Outfit_500Medium",
+  semibold: "Outfit_600SemiBold",
+  bold: "Outfit_700Bold",
+  display: "Outfit_600SemiBold",
+  title: "Outfit_600SemiBold",
+  /** Kept for older call sites: figures now use the same family. */
+  mono: "Outfit_500Medium",
+  monoBold: "Outfit_600SemiBold",
 } as const;
 
 export const type = {
-  display: { fontFamily: font.display, fontSize: 36, lineHeight: 38, letterSpacing: 0.6, textTransform: "uppercase" as const, color: color.text },
-  title: { fontFamily: font.title, fontSize: 22, lineHeight: 26, letterSpacing: 0.2, color: color.text },
-  body: { fontFamily: font.regular, fontSize: 16, lineHeight: 23, color: color.text },
-  strong: { fontFamily: font.semibold, fontSize: 16, lineHeight: 23, color: color.text },
+  display: { fontFamily: font.display, fontSize: 32, lineHeight: 38, letterSpacing: -0.5, color: color.text },
+  title: { fontFamily: font.title, fontSize: 20, lineHeight: 26, letterSpacing: -0.2, color: color.text },
+  body: { fontFamily: font.regular, fontSize: 16, lineHeight: 24, color: color.text },
+  strong: { fontFamily: font.medium, fontSize: 16, lineHeight: 24, color: color.text },
   explain: { fontFamily: font.regular, fontSize: 15, lineHeight: 22, color: color.muted },
   small: { fontFamily: font.regular, fontSize: 14, lineHeight: 20, color: color.muted },
-  label: { fontFamily: font.semibold, fontSize: 14, lineHeight: 18, color: color.text },
-  /** Instrument readouts: countdowns, paces, volumes. */
-  readout: { fontFamily: "JetBrainsMono_700Bold", fontSize: 28, lineHeight: 32, color: color.accent, letterSpacing: -0.5 },
-  data: { fontFamily: "JetBrainsMono_500Medium", fontSize: 13, lineHeight: 18, letterSpacing: 0.4, color: color.muted },
-  /** Small capitals above a section: WHY, THE WORK. */
-  eyebrow: { fontFamily: font.semibold, fontSize: 12, lineHeight: 16, letterSpacing: 1.2, textTransform: "uppercase" as const, color: color.muted },
+  label: { fontFamily: font.medium, fontSize: 15, lineHeight: 20, color: color.text },
+  /** Big figures: countdowns, volumes. */
+  readout: { fontFamily: font.semibold, fontSize: 30, lineHeight: 36, letterSpacing: -0.6, color: color.text },
+  data: { fontFamily: font.regular, fontSize: 13, lineHeight: 18, color: color.muted },
+  /** A quiet heading above a block: "The work", "Why". */
+  eyebrow: { fontFamily: font.medium, fontSize: 13, lineHeight: 18, color: color.muted },
   figure: { fontVariant: ["tabular-nums" as const] },
 };
 
-export const radius = { control: 6, row: 8 } as const;
+export const radius = { control: 14, row: 20, card: 24, pill: 999 } as const;
