@@ -1,17 +1,18 @@
 /**
  * Log a planned session (D-025): done / partly done / skipped, time, distance (runs), effort,
  * pain, fatigue and soreness, note. Opened from a session on the plan; saving again edits the log.
+ * With `id=new` it logs a workout that wasn't in the plan: the athlete picks the day and the kind.
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
-import { LOG_BODY_AREAS, LOG_SCALES } from "@adaptive-athlete/engine";
+import { addDays, LOG_BODY_AREAS, LOG_SCALES } from "@adaptive-athlete/engine";
 import { Button, Callout, Choice, Field, Heading, Pills, Question, Screen } from "@/components/ui";
 import { backend } from "@/data";
 import { minutes, shortDate } from "@/lib/format";
-import { useSession } from "@/lib/session";
+import { localToday, useSession } from "@/lib/session";
 import { space } from "@/lib/theme";
-import { asksDistance, BODY_AREA_LABELS, formFor, toManualLog, type FormErrors, type LogForm } from "@/logging/form";
+import { asksDistance, BODY_AREA_LABELS, formFor, OTHER_SPORTS, OTHER_WORKOUT_DAYS, otherWorkoutForm, toManualLog, type FormErrors, type LogForm } from "@/logging/form";
 
 const range = (lo: number, hi: number) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
 const scale = (lo: number, hi: number) => range(lo, hi).map((n) => ({ value: n, label: String(n) }));
@@ -19,14 +20,16 @@ const scale = (lo: number, hi: number) => range(lo, hi).map((n) => ({ value: n, 
 export default function LogScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { plan, logs, putLog, answers } = useSession();
-  const workout = plan?.plan.weeks.flatMap((w) => w.workouts).find((w) => w.id === id);
-  const existing = id ? logs[id] : undefined;
-  const [form, setForm] = useState<LogForm | null>(() => (workout ? formFor(workout, answers.units, existing) : null));
+  const today = localToday();
+  const other = id === "new";
+  const workout = other ? null : plan?.plan.weeks.flatMap((w) => w.workouts).find((w) => w.id === id) ?? null;
+  const existing = id && !other ? logs[id] : undefined;
+  const [form, setForm] = useState<LogForm | null>(() => (other ? otherWorkoutForm(today) : workout ? formFor(workout, answers.units, existing) : null));
   const [errors, setErrors] = useState<FormErrors>({});
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  if (!workout || !form) {
+  if ((!workout && !other) || !form) {
     return (
       <Screen footer={<Button title="Back to my plan" onPress={() => router.replace("/plan")} />}>
         <Heading title="Session not found" detail="Open the session from your plan to log it." />
@@ -42,7 +45,7 @@ export default function LogScreen() {
   const unit = answers.units === "mi" ? "miles" : "km";
 
   const save = async () => {
-    const result = toManualLog(form, workout, answers.units);
+    const result = toManualLog(form, workout, answers.units, today);
     if ("errors" in result) return setErrors(result.errors);
     setBusy(true);
     setSaveError(null);
@@ -66,14 +69,39 @@ export default function LogScreen() {
         </View>
       }
     >
-      <Heading title={workout.title} detail={`${shortDate(workout.date)} · planned ${minutes(workout.estimatedMinutes)}`} />
+      {workout ? (
+        <Heading title={workout.title} detail={`${shortDate(workout.date)} · planned ${minutes(workout.estimatedMinutes)}`} />
+      ) : (
+        <Heading title="Log other workout" detail="Training that wasn't in your plan still counts toward your week." />
+      )}
       {saveError ? <Callout tone="safety">{saveError}</Callout> : null}
 
-      <Question label="Did you do it?" error={errors.status}>
-        <Choice label="Done" selected={form.status === "completed"} onPress={() => set({ status: "completed" })} />
-        <Choice label="Partly done" detail="Cut short or changed" selected={form.status === "partial"} onPress={() => set({ status: "partial" })} />
-        <Choice label="Skipped" selected={form.status === "skipped"} onPress={() => set({ status: "skipped" })} />
-      </Question>
+      {workout ? (
+        <Question label="Did you do it?" error={errors.status}>
+          <Choice label="Done" selected={form.status === "completed"} onPress={() => set({ status: "completed" })} />
+          <Choice label="Partly done" detail="Cut short or changed" selected={form.status === "partial"} onPress={() => set({ status: "partial" })} />
+          <Choice label="Skipped" selected={form.status === "skipped"} onPress={() => set({ status: "skipped" })} />
+        </Question>
+      ) : (
+        <>
+          <Question label="When?" error={errors.date}>
+            <Pills
+              label="Day"
+              options={Array.from({ length: OTHER_WORKOUT_DAYS }, (_, i) => addDays(today, -i)).map((d, i) => ({
+                value: d,
+                label: i === 0 ? "Today" : i === 1 ? "Yesterday" : shortDate(d),
+              }))}
+              isOn={(d) => form.date === d}
+              onToggle={(d) => set({ date: d })}
+            />
+          </Question>
+          <Question label="What kind of workout?" error={errors.sport}>
+            {OTHER_SPORTS.map((o) => (
+              <Choice key={o.value} label={o.label} selected={form.sport === o.value} onPress={() => set({ sport: o.value, distance: "" })} />
+            ))}
+          </Question>
+        </>
+      )}
 
       {done ? (
         <>
@@ -81,7 +109,7 @@ export default function LogScreen() {
             <Field value={form.minutes} onChangeText={(v) => set({ minutes: v })} keyboardType="number-pad" invalid={!!errors.duration} accessibilityLabel="Minutes" />
           </Question>
 
-          {asksDistance(workout) ? (
+          {asksDistance(form.sport, !!workout) ? (
             <Question label={`Distance (${unit})`} help="Optional." error={errors.distance}>
               <Field value={form.distance} onChangeText={(v) => set({ distance: v })} keyboardType="decimal-pad" invalid={!!errors.distance} accessibilityLabel={`Distance in ${unit}`} />
             </Question>

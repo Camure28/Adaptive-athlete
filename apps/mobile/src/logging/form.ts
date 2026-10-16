@@ -1,9 +1,11 @@
 /**
  * The log-a-session form (D-025): its state, prefill from the planned session, and conversion to
- * the engine's ManualLog. Pure, so it's unit-tested. Validation rules live in the engine
+ * the engine's ManualLog. Also logs a workout that wasn't in the plan ("Log other workout"): the
+ * athlete picks the day and the kind of workout, and it's always logged as done. Pure, so it's unit-tested. Validation rules live in the engine
  * (validateManualLog) so the app and future server checks agree.
  */
 import {
+  addDays,
   METERS_PER_MILE,
   validateManualLog,
   type LogBodyArea,
@@ -11,6 +13,7 @@ import {
   type LogErrors,
   type ManualLog,
   type PlannedWorkout,
+  type Sport,
 } from "@adaptive-athlete/engine";
 import { toMeters, type Units } from "@/onboarding/model";
 
@@ -18,6 +21,10 @@ export type LogStatus = CompletedWorkout["status"];
 
 export interface LogForm {
   status: LogStatus | null;
+  /** ISO date; fixed to the planned date, chosen for another workout. */
+  date: string;
+  /** Fixed for a planned session, chosen for another workout. */
+  sport: Sport | null;
   minutes: string;
   distance: string; // in the athlete's units
   rpe: number | null;
@@ -46,8 +53,28 @@ export const BODY_AREA_LABELS: Record<LogBodyArea, string> = {
   other: "Somewhere else",
 };
 
-/** Distance is asked only for sessions that are mostly running. */
-export const asksDistance = (w: PlannedWorkout): boolean => w.sport === "run" || w.sport === "trail_run";
+/** Kinds of workout the athlete can log outside the plan. */
+export const OTHER_SPORTS: { value: Sport; label: string }[] = [
+  { value: "run", label: "Run" },
+  { value: "hyrox", label: "HYROX or mixed" },
+  { value: "strength", label: "Strength" },
+  { value: "bike", label: "Bike" },
+  { value: "row", label: "Row" },
+  { value: "swim", label: "Swim" },
+  { value: "other", label: "Something else" },
+];
+
+/** How far back another workout can be logged (the engine's rules look at the last few weeks). */
+export const OTHER_WORKOUT_DAYS = 14;
+
+/**
+ * Distance is asked for planned sessions that are mostly running, and for other workouts that
+ * cover a distance (runs, rides, rows, swims).
+ */
+export function asksDistance(sport: Sport | null, planned: boolean): boolean {
+  if (sport === "run" || sport === "trail_run") return true;
+  return !planned && (sport === "bike" || sport === "row" || sport === "swim");
+}
 
 const fromMeters = (m: number, units: Units): string => String(Math.round((m / (units === "mi" ? METERS_PER_MILE : 1000)) * 100) / 100);
 
@@ -57,6 +84,8 @@ export function formFor(w: PlannedWorkout, units: Units, existing?: CompletedWor
     const hurt = existing.pain === undefined ? null : existing.pain.level > 0;
     return {
       status: existing.status,
+      date: w.date,
+      sport: w.sport,
       minutes: existing.durationSeconds !== undefined ? String(Math.round(existing.durationSeconds / 60)) : String(w.estimatedMinutes),
       distance: existing.distanceMeters !== undefined ? fromMeters(existing.distanceMeters, units) : "",
       rpe: existing.rpe ?? null,
@@ -73,8 +102,10 @@ export function formFor(w: PlannedWorkout, units: Units, existing?: CompletedWor
   }
   return {
     status: null,
+    date: w.date,
+    sport: w.sport,
     minutes: String(w.estimatedMinutes),
-    distance: asksDistance(w) && w.plannedDistanceMeters ? fromMeters(w.plannedDistanceMeters, units) : "",
+    distance: asksDistance(w.sport, true) && w.plannedDistanceMeters ? fromMeters(w.plannedDistanceMeters, units) : "",
     rpe: null,
     hurt: null,
     painLevel: null,
@@ -88,18 +119,49 @@ export function formFor(w: PlannedWorkout, units: Units, existing?: CompletedWor
   };
 }
 
-export type FormErrors = LogErrors & { status?: string; painAltered?: string; painSharp?: string; painStopped?: string };
+/** A blank form for a workout that wasn't in the plan, dated today. */
+export function otherWorkoutForm(today: string): LogForm {
+  return {
+    status: "completed",
+    date: today,
+    sport: null,
+    minutes: "",
+    distance: "",
+    rpe: null,
+    hurt: null,
+    painLevel: null,
+    painArea: null,
+    painAltered: null,
+    painSharp: null,
+    painStopped: null,
+    fatigue: null,
+    soreness: null,
+    notes: "",
+  };
+}
 
-/** The ManualLog for this form, or the errors to show. */
-export function toManualLog(f: LogForm, w: PlannedWorkout, units: Units): { log: ManualLog } | { errors: FormErrors } {
-  if (!f.status) return { errors: { status: "Did you do this session?" } };
-  const log: ManualLog = { plannedWorkoutId: w.id, date: w.date, sport: w.sport, status: f.status };
-  if (f.notes.trim()) log.notes = f.notes.trim();
+export type FormErrors = LogErrors & { status?: string; sport?: string; date?: string; painAltered?: string; painSharp?: string; painStopped?: string };
+
+/**
+ * The ManualLog for this form, or the errors to show. `w` is the planned session, or null for a
+ * workout that wasn't in the plan (then `today` bounds the date).
+ */
+export function toManualLog(f: LogForm, w: PlannedWorkout | null, units: Units, today?: string): { log: ManualLog } | { errors: FormErrors } {
   const errors: FormErrors = {};
+  let log: ManualLog;
+  if (w) {
+    if (!f.status) return { errors: { status: "Did you do this session?" } };
+    log = { plannedWorkoutId: w.id, date: w.date, sport: w.sport, status: f.status };
+  } else {
+    if (!f.sport) errors.sport = "What kind of workout was it?";
+    if (!today || f.date > today || f.date < addDays(today, -(OTHER_WORKOUT_DAYS - 1))) errors.date = "Pick a day in the last two weeks.";
+    log = { date: f.date, sport: f.sport ?? "other", status: "completed" };
+  }
+  if (f.notes.trim()) log.notes = f.notes.trim();
   if (f.status !== "skipped") {
     const mins = Number(f.minutes);
     log.durationSeconds = f.minutes.trim() === "" || Number.isNaN(mins) ? NaN : mins * 60;
-    if (asksDistance(w) && f.distance.trim() !== "") {
+    if (asksDistance(log.sport, !!w) && f.distance.trim() !== "") {
       const d = Number(f.distance);
       log.distanceMeters = Number.isNaN(d) ? NaN : toMeters(d, units);
     }

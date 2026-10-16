@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromManualLog, type PlannedWorkout } from "@adaptive-athlete/engine";
-import { formFor, logBadge, toManualLog, type LogForm } from "../src/logging/form";
+import { formFor, logBadge, otherWorkoutForm, toManualLog, type LogForm } from "../src/logging/form";
 
 const run: PlannedWorkout = {
   id: "plan-1:2026-10-20:threshold", date: "2026-10-20", sport: "run", type: "threshold", title: "Threshold intervals",
@@ -69,3 +69,33 @@ describe("log form", () => {
     expect(logBadge(fromManualLog({ ...r.log, status: "skipped" }, "log-2"))).toBe("SKIPPED");
   });
 });
+
+describe("logging a workout that wasn't in the plan", () => {
+  const TODAY = "2026-10-16";
+  const other = (over: Partial<LogForm> = {}): LogForm => ({ ...otherWorkoutForm(TODAY), sport: "run", minutes: "40", rpe: 8, hurt: false, ...over });
+
+  it("asks what kind and when, and is always logged as done", () => {
+    const r = toManualLog(otherWorkoutForm(TODAY), null, "mi", TODAY);
+    expect("errors" in r && Object.keys(r.errors).sort()).toEqual(["duration", "pain", "rpe", "sport"]);
+  });
+
+  it("builds an unplanned log the engine counts (no planned session id)", () => {
+    const r = toManualLog(other({ date: "2026-10-15", distance: "5" }), null, "mi", TODAY);
+    expect(r).toEqual({ log: { date: "2026-10-15", sport: "run", status: "completed", durationSeconds: 2400, distanceMeters: 8047, rpe: 8, pain: null } });
+  });
+
+  it("only accepts the last two weeks, never the future", () => {
+    for (const date of ["2026-10-17", "2026-10-02"]) {
+      const r = toManualLog(other({ date }), null, "mi", TODAY);
+      expect("errors" in r && r.errors.date).toBeTruthy();
+    }
+    expect("log" in toManualLog(other({ date: "2026-10-03" }), null, "mi", TODAY)).toBe(true);
+  });
+
+  it("asks for distance on rides, rows and swims too, but not strength", () => {
+    expect(toManualLog(other({ sport: "bike", distance: "12" }), null, "km", TODAY)).toMatchObject({ log: { distanceMeters: 12000 } });
+    const r = toManualLog(other({ sport: "strength", distance: "3" }), null, "km", TODAY);
+    expect("log" in r && r.log.distanceMeters).toBeUndefined();
+  });
+});
+

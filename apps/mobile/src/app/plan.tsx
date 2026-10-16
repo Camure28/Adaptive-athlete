@@ -167,15 +167,16 @@ export default function PlanScreen() {
         </Pressable>
       </View>
       <Dashboard plan={plan} answers={answers} today={today} />
-      {review ? (
-        <View style={{ marginBottom: space.md }}>
+      <View style={{ marginBottom: space.md, gap: space.xs }}>
+        {review ? (
           <Button
             kind={questions > 0 ? "primary" : "quiet"}
             title={questions > 0 ? `Your review · ${questions} ${questions === 1 ? "question" : "questions"}` : "Your latest review"}
             onPress={() => router.push("/review")}
           />
-        </View>
-      ) : null}
+        ) : null}
+        <Button kind="quiet" title="Log other workout" onPress={() => router.push({ pathname: "/log", params: { id: "new" } })} />
+      </View>
       {dismissed
         ? plan.basis.notes.filter((n) => !dismissed.has(n)).map((n) => (
             <Callout key={n} onDismiss={() => dismiss(n)}>{n}</Callout>

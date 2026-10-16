@@ -50,5 +50,5 @@ pnpm functions:deploy                      # rebuild the engine bundle, deploy g
 - Supabase: email confirmation turned off for development; turn it back on before anyone else uses the app.
 - Verified 2026-10-16: sign-up and onboarding save to Supabase from the iPhone.
 - Verified 2026-10-16: first plan built and saved by the generate-plan Edge Function, shown on the iPhone (D-022).
-- Live 2026-10-16: workout logging (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
-- Next: log unplanned workouts, UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).
+- Live 2026-10-16: workout logging including workouts outside the plan (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
+- Next: UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).
