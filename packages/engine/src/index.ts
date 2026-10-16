@@ -13,3 +13,7 @@ export * from "./hyrox/rulebook.js";
 export * from "./hyrox/equipment.js";
 export * from "./hyrox/config.js";
 export { generateHyroxPlan, HyroxPlanError, startPhases, type HyroxAthlete, type TrainingStatus } from "./hyrox/generator.js";
+export * from "./imports/activity.js";
+export * from "./imports/healthkit.js";
+export * from "./imports/dedupe.js";
+export * from "./imports/match.js";

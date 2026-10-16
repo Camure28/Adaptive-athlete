@@ -6,6 +6,11 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (build session, continued)
+- **Decided with Cameron:** Apple Health is the first automatic import channel (it also brings in Garmin and Strava workouts that those apps write to it). Keep building before buying the Apple Developer Program so it switches on as soon as he joins. Garmin's API is paused for new apps; Strava is capped and bans AI use. Details and sources in `INTEGRATIONS.md`, "Automatic workout import". *Decision number to be assigned by the next session that adds decisions (Claude Code was mid step 5, to avoid a numbering clash).*
+- **Done:** the import pipeline in the engine (`packages/engine/src/imports/`), with 24 tests: Apple Health adapter, validation, idempotent re-imports, duplicate copies, merge into a hand log, plan matching (asks when ambiguous), follow-up questions. Engine only; no app or database changes, so no conflict with step 5.
+- **Open (Claude Code):** finish step 5; step 6 manual logging should store into the same shape and add the import columns listed in `INTEGRATIONS.md`. Then the server import function, and HealthKit itself after the developer program.
+
 ## 2026-10-16 — Claude Code on Cameron's Mac
 - **Done:** Supabase CLI set up (dev dependency `supabase@2.119.0`, `supabase/config.toml`), repo linked to the live project. Checked the live database: all five migrations are present (the combined `supabase_update_oct16.sql` did run; 37 race rows), so they were marked applied with `migration repair`. `db push --dry-run` reports the database up to date. Workflow in `CLAUDE.md` and `docs/SETUP_SUPABASE.md` §2b.
 - **For every session:** new database changes are a new file in `supabase/migrations/`, applied with `npx supabase db push` from the Mac (dry run shown to Cameron first). No more pasting SQL into the editor. Chats without the Mac write the migration and leave "push pending" in this log.

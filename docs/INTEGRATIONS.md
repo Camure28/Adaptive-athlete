@@ -33,4 +33,31 @@ Each entry records what the source allows, verified against its own published te
 1. Ask HYROX for a data licence or partnership: results lookup by name and the event calendar.
 2. Meanwhile, compliant fallbacks: (a) the athlete enters their own past result (finish time, optional run and station splits) with a link that opens the HYROX results site in their browser to look it up; (b) a race list we maintain ourselves (event name, city, dates, divisions offered), typed in by hand from public announcements and stored in our database, plus "my race isn't listed".
 
-Other providers (Apple Health, Garmin, Strava, COROS, WHOOP, Oura, Polar, Fitbit) are to be researched in Phase 3. Note D-005: Strava data may not be sent to AI models.
+## Automatic workout import (checked 2026-10-16)
+
+**Status:** we're building the import logic ahead of the Apple Developer Program purchase, so Apple Health can be switched on as soon as the membership exists. The product owner agreed 2026-10-16 to keep building before joining. Apple Health is the first channel; there is no live connection yet.
+
+| Channel | Access today | Notes |
+|---|---|---|
+| Apple Health (HealthKit) | Native, on the phone. Needs the HealthKit capability, which requires the paid Apple Developer Program; free personal teams can't add it. | Hub: Apple Watch, and Garmin Connect, Strava and others write workouts into it when the athlete turns that on in their app. iPhone only (Android Health Connect later). Apple's rules (App Review 5.1.3) limit how HealthKit data may be used. Until those are reviewed, `apple_health` stays out of `LLM_ELIGIBLE_SOURCES`. |
+| Garmin Connect API | New applications paused since about spring 2026; existing partners still work; no reopening date ([the5krunner, 2026-09-14](https://the5krunner.com/2026/09/14/garmin-developer-api-access-paused/)). | Reach Garmin users through Apple Health meanwhile. Re-check before applying. |
+| Strava API | New apps are capped at 1 athlete (10 without review); more needs a review with no guaranteed timeline. Standard developers need a Strava subscription. API data may not be used in AI features, including as model context ([Terra summary, 2026-09-06](https://tryterra.co/blog/strava-api-changes-2026); verify against Strava's own terms). | Conflicts with the coaching explanations (D-005). Not planned. |
+
+**Import pipeline** (`packages/engine/src/imports/`, pure and tested):
+1. The adapter (`fromHealthKitWorkout`) turns a HealthKit workout into an `ImportedActivity`. `source` is the channel (`apple_health`); `originApp` is who recorded it (e.g. Garmin Connect).
+2. `validateActivity` drops impossible values (heart rate, distance) with a warning, and rejects recordings under 2 minutes or with broken times. Limits match the database checks.
+3. `decideImport` covers four cases:
+   - The same provider id again: unchanged, or an update if the provider edited the workout.
+   - Another copy of the same session (same kind of sport, at least 60% time overlap): skip it, or replace the stored copy if this one has more data.
+   - A session the athlete logged by hand that day: attach the device data to their log.
+   - Anything else: a new entry.
+4. `mergeIntoManual`: the athlete's typed numbers win. The device fills blanks, and disagreements over 10% are shown to the athlete to choose.
+5. `matchToPlan` finds the planned session that day by sport and duration. HIIT, cross training and functional strength recordings count as candidates for HYROX sessions. When two sessions fit about equally (a double day), it asks the athlete instead of guessing. Workouts with no planned session that day are logged as extra training.
+6. `athleteFollowUp` asks for effort (RPE) and pain, which a watch can't measure. It also asks "was this the whole session?" when the recording is well short of the plan.
+
+**Still to build** (Claude Code, step 6 onward):
+- Database columns for imports (`started_at`, `ended_at`, `origin_app`, `device`, `elevation_gain_meters`, `active_energy_kcal`) in a new migration.
+- A server-side import function that runs these steps and writes the log.
+- Once the Apple Developer Program is active: the HealthKit library, the capability and a permission screen, and background delivery so new workouts arrive without opening the app.
+
+Other providers (COROS, WHOOP, Oura, Polar, Fitbit) are to be researched later through the same `ImportedActivity` shape. Note D-005: Strava data may not be sent to AI models.
