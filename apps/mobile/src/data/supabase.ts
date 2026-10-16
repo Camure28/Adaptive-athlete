@@ -110,6 +110,7 @@ const hms = (s: number): string => {
 /** Supabase error text → interface voice. Unknown errors get a generic, actionable message. */
 function friendly(message: string): string {
   if (/invalid login credentials/i.test(message)) return "That email and password don't match an account.";
+  if (/email not confirmed/i.test(message)) return "Confirm your email first: tap the link we sent you, then sign in.";
   if (/already registered/i.test(message)) return "An account with that email already exists. Sign in instead.";
   if (/password/i.test(message)) return "Use a password with at least 8 characters.";
   if (/email/i.test(message)) return "Enter a valid email address.";

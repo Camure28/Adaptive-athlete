@@ -22,7 +22,7 @@ export default function SignIn() {
     setBusy(true);
     try {
       if (mode === "create") {
-        const { account, needsEmailConfirmation } = await backend.signUp(email.trim(), password);
+        const { account, needsEmailConfirmation } = await backend.signUp(email.trim().toLowerCase(), password);
         if (needsEmailConfirmation || !account) {
           setNotice("Check your email to confirm your account, then sign in.");
           setMode("sign_in");
@@ -30,7 +30,7 @@ export default function SignIn() {
         }
         setAccount(account);
       } else {
-        setAccount(await backend.signIn(email.trim(), password));
+        setAccount(await backend.signIn(email.trim().toLowerCase(), password));
       }
       router.replace("/");
     } catch (e) {
