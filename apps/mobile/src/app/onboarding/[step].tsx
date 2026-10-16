@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
+import { TechLoader } from "@/components/loader";
 import { Button, Callout, Lane, Screen } from "@/components/ui";
 import { backend } from "@/data";
 import { localToday, useSession } from "@/lib/session";
@@ -35,6 +36,8 @@ export default function OnboardingStep() {
       setBusy(false);
     }
   };
+
+  if (busy) return <TechLoader lines={["SAVING ATHLETE PROFILE", "GENERATING TRAINING PLAN"]} stage={0} />;
 
   return (
     <Screen

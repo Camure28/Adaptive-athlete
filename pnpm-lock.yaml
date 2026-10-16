@@ -38,6 +38,9 @@ importers:
       '@expo-google-fonts/barlow-condensed':
         specifier: ^0.4.1
         version: 0.4.1
+      '@expo-google-fonts/jetbrains-mono':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.86.3(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.2.18)(react@19.2.3))
@@ -686,6 +689,9 @@ packages:
 
   '@expo-google-fonts/barlow@0.4.1':
     resolution: {integrity: sha512-ARAwBvQFGxOt2dfoQRVDRZghaStrXTIyI7oBD6/J4z2Iyr+0ME2HJq13RFhTuagCFrT4iapzuKHwOR3iLrNJrA==}
+
+  '@expo-google-fonts/jetbrains-mono@0.4.1':
+    resolution: {integrity: sha512-CslACrtMOcRwoWXCO7OMEI+9w3fukWSoBtvNz46OqPoogEuuoY0tkDY1O8sFumk8t0pC6Cx0Xr95O0TOQhpkug==}
 
   '@expo-google-fonts/material-symbols@0.4.50':
     resolution: {integrity: sha512-XNSgSfd+1p6wqRAzzhrckGngHJQ1/z+oCMdI5FN+x/VnDeMMFGkXsuRNPYcZTYYff1GwVwx4u6Gqnb30aALysw==}
@@ -4409,6 +4415,8 @@ snapshots:
   '@expo-google-fonts/barlow-condensed@0.4.1': {}
 
   '@expo-google-fonts/barlow@0.4.1': {}
+
+  '@expo-google-fonts/jetbrains-mono@0.4.1': {}
 
   '@expo-google-fonts/material-symbols@0.4.50': {}
 

@@ -209,8 +209,8 @@ function PastResult({ a, update, errors }: { a: OnboardingAnswers; update: StepP
 }
 
 const st = {
-  event: { padding: space.md, borderRadius: radius.row, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface, marginBottom: space.sm, gap: 2 },
-  eventOn: { borderColor: color.turf, backgroundColor: color.turfSoft },
+  event: { padding: space.md, borderRadius: radius.row, borderWidth: 1, borderColor: color.line, backgroundColor: color.surface, marginBottom: space.sm, gap: 2 },
+  eventOn: { borderColor: color.accent, backgroundColor: color.accentSoft },
   grid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: space.sm },
   cell: { flexBasis: "47%" as const, flexGrow: 1 },
 };

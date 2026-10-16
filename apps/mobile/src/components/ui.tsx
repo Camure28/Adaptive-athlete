@@ -2,7 +2,7 @@ import { createContext, useContext, useRef, type ReactNode } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { backend } from "@/data";
-import { color, radius, space, type } from "@/lib/theme";
+import { color, font, radius, space, type } from "@/lib/theme";
 
 /** Lets a text field ask its page to scroll it into view above the keyboard. */
 const ScrollTo = createContext<((field: View | TextInput | null) => void) | null>(null);
@@ -28,7 +28,7 @@ export function Screen({ children, footer }: { children: ReactNode; footer?: Rea
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         {backend.mode === "demo" ? (
           <View style={s.demo} accessibilityRole="alert">
-            <Text style={s.demoText}>Demo mode: nothing you enter is saved.</Text>
+            <Text style={s.demoText}>DEMO MODE · NOTHING YOU ENTER IS SAVED</Text>
           </View>
         ) : null}
         <ScrollTo.Provider value={reveal}>
@@ -61,6 +61,15 @@ export function Lane({ total, current }: { total: number; current: number }) {
         <View key={i} style={[s.laneSeg, i <= current && s.laneSegOn]} />
       ))}
     </View>
+  );
+}
+
+/** Brand mark: condensed wordmark with a signal-yellow divider. */
+export function Wordmark() {
+  return (
+    <Text style={s.mark} accessibilityRole="header" accessibilityLabel="Adaptive Athlete">
+      ADAPTIVE<Text style={{ color: color.accent }}>//</Text>ATHLETE
+    </Text>
   );
 }
 
@@ -145,7 +154,7 @@ export function Pills<T extends string | number>({
           accessibilityState={{ checked: isOn(o.value) }}
           style={[s.pill, isOn(o.value) && s.pillOn]}
         >
-          <Text style={[type.label, isOn(o.value) && { color: color.surface }]}>{o.label}</Text>
+          <Text style={[type.label, isOn(o.value) && { color: color.onAccent }]}>{o.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -159,7 +168,9 @@ export function Field(props: TextInputProps & { invalid?: boolean }) {
   return (
     <TextInput
       ref={ref}
-      placeholderTextColor="#7A8288"
+      placeholderTextColor="#5E656E"
+      selectionColor={color.accent}
+      keyboardAppearance="dark"
       style={[s.field, invalid && { borderColor: color.safety }, style]}
       onFocus={(e) => {
         reveal?.(ref.current);
@@ -195,29 +206,30 @@ export function Button({ title, onPress, kind = "primary", busy = false }: { tit
       accessibilityState={{ busy }}
       style={({ pressed }) => [kind === "primary" ? s.btn : s.btnQuiet, pressed && { opacity: 0.85 }]}
     >
-      <Text style={[type.label, { fontSize: 16, color: kind === "primary" ? color.surface : color.turf }]}>{busy ? "Working…" : title}</Text>
+      <Text style={kind === "primary" ? s.btnText : s.btnQuietText}>{busy ? "Working…" : title}</Text>
     </Pressable>
   );
 }
 
 export function Callout({ children, tone = "note" }: { children: ReactNode; tone?: "note" | "safety" }) {
   return (
-    <View style={[s.callout, tone === "safety" && { backgroundColor: color.safetySoft }]}>
-      <Text style={[type.small, { color: color.ink }]}>{children}</Text>
+    <View style={[s.callout, tone === "safety" && { backgroundColor: color.safetySoft, borderLeftColor: color.safety }]}>
+      <Text style={[type.small, { color: color.text }]}>{children}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: color.concrete },
+  page: { flex: 1, backgroundColor: color.bg },
   content: { padding: space.lg, paddingBottom: space.xxl },
   column: { width: "100%", maxWidth: 560, alignSelf: "center" },
-  footer: { padding: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.rule, backgroundColor: color.concrete },
-  demo: { backgroundColor: color.note, paddingVertical: space.sm, paddingHorizontal: space.lg },
-  demoText: { ...type.small, color: color.ink, textAlign: "center" },
+  footer: { padding: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: color.line, backgroundColor: color.bg },
+  mark: { fontFamily: font.display, fontSize: 18, letterSpacing: 3, color: color.text, marginBottom: space.xl },
+  demo: { backgroundColor: color.panel, paddingVertical: space.sm, paddingHorizontal: space.lg },
+  demoText: { ...type.data, fontSize: 11, color: color.accent, textAlign: "center" },
   lane: { flexDirection: "row", gap: 4, marginBottom: space.xl },
-  laneSeg: { flex: 1, height: 6, borderRadius: 3, backgroundColor: color.rule },
-  laneSegOn: { backgroundColor: color.turf },
+  laneSeg: { flex: 1, height: 4, borderRadius: 1, backgroundColor: color.line },
+  laneSegOn: { backgroundColor: color.accent },
   error: { ...type.small, color: color.safety, marginTop: space.sm },
   choice: {
     flexDirection: "row",
@@ -227,23 +239,25 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg,
     borderRadius: radius.row,
     borderWidth: 1,
-    borderColor: color.rule,
+    borderColor: color.line,
     marginBottom: space.sm,
     minHeight: 52,
   },
-  choiceOn: { borderColor: color.turf, backgroundColor: color.turfSoft },
-  dot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.iron, alignItems: "center", justifyContent: "center" },
-  dotFill: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.turf },
-  box: { width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: color.iron, alignItems: "center", justifyContent: "center" },
-  boxTick: { width: 10, height: 10, borderRadius: 2, backgroundColor: color.turf },
-  markOn: { borderColor: color.turf },
+  choiceOn: { borderColor: color.accent, backgroundColor: color.accentSoft },
+  dot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
+  dotFill: { width: 10, height: 10, borderRadius: 5, backgroundColor: color.accent },
+  box: { width: 20, height: 20, borderRadius: 5, borderWidth: 2, borderColor: color.muted, alignItems: "center", justifyContent: "center" },
+  boxTick: { width: 10, height: 10, borderRadius: 2, backgroundColor: color.accent },
+  markOn: { borderColor: color.accent },
   pills: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  pill: { minWidth: 48, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, alignItems: "center", justifyContent: "center", backgroundColor: color.surface },
-  pillOn: { backgroundColor: color.turf, borderColor: color.turf },
-  field: { ...type.body, minWidth: 0, minHeight: 48, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface },
+  pill: { minWidth: 48, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.line, alignItems: "center", justifyContent: "center", backgroundColor: color.surface },
+  pillOn: { backgroundColor: color.accent, borderColor: color.accent },
+  field: { ...type.body, minWidth: 0, minHeight: 48, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.line, backgroundColor: color.surface },
   stepper: { flexDirection: "row", alignItems: "center", gap: space.md },
-  stepBtn: { width: 48, height: 48, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface, alignItems: "center", justifyContent: "center" },
-  btn: { minHeight: 52, borderRadius: radius.control, backgroundColor: color.turf, alignItems: "center", justifyContent: "center" },
+  stepBtn: { width: 48, height: 48, borderRadius: radius.control, borderWidth: 1, borderColor: color.line, backgroundColor: color.surface, alignItems: "center", justifyContent: "center" },
+  btn: { minHeight: 54, borderRadius: radius.control, backgroundColor: color.accent, alignItems: "center", justifyContent: "center" },
+  btnText: { fontFamily: font.title, fontSize: 19, letterSpacing: 1.6, textTransform: "uppercase", color: color.onAccent },
+  btnQuietText: { fontFamily: font.semibold, fontSize: 15, letterSpacing: 0.4, color: color.accent },
   btnQuiet: { minHeight: 44, alignItems: "center", justifyContent: "center" },
-  callout: { backgroundColor: color.note, padding: space.md, borderRadius: radius.row, marginBottom: space.lg },
+  callout: { backgroundColor: color.panel, padding: space.md, borderRadius: radius.row, marginBottom: space.lg, borderLeftWidth: 3, borderLeftColor: color.accent },
 });

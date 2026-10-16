@@ -100,3 +100,9 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Race list:** maintained by us by hand from public announcements (table `hyrox_events`, migration `20261016000005_hyrox_events.sql`), each row with its source and marked unverified until checked against HYROX's announcement. Athletes can read it; only the SQL Editor (service role) can change it. Seeded with 37 events from October 2026 to June 2027.
 **Status:** Accepted (product owner 2026-10-16). Licence request pending.
 
+## D-020 — Visual direction: dark cockpit, signal yellow (2026-10-16)
+**Decision:** The app moves to a single dark theme: near-black surfaces, signal yellow (#FFC400) for actions, selection, progress and live figures, cool greys for secondary text, red only for pain and safety. Type: Barlow Condensed (uppercase headings), Barlow (text), JetBrains Mono (readouts and labels). Loading screens use a framed scanner with real status lines (no fake percentages). The plan screen opens with a personal banner: level, division and training status; race and countdown; week-of-plan strip; this week's sessions, hard sessions, run volume and time; race-effort pace (only when a benchmark supports it, labelled as an estimate); full simulations; next session.
+**Why:** Product owner wants a futuristic, elite-athlete feel and quick key stats. Supersedes the colour part of D-017.
+**Note:** HYROX's own brand is also black and yellow. Since we aren't affiliated, keep our name, logo and wording clearly our own, and don't use HYROX logos, to avoid looking official. Revisit if HYROX partnership talks go ahead.
+**Status:** Accepted (product owner 2026-10-16); exact colours and fonts are Claude's choices, open to change.
+

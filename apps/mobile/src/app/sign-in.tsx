@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import { Text } from "react-native";
-import { Button, Callout, Field, Heading, Question, Screen } from "@/components/ui";
+import { Button, Callout, Field, Heading, Question, Screen, Wordmark } from "@/components/ui";
 import { backend } from "@/data";
 import { useSession } from "@/lib/session";
 import { space, type } from "@/lib/theme";
@@ -49,6 +49,7 @@ export default function SignIn() {
         </>
       }
     >
+      <Wordmark />
       <Heading
         title={mode === "create" ? "Train for your HYROX" : "Welcome back"}
         detail={mode === "create" ? "A plan built around your race, your level, and the equipment you actually have. It adjusts as you log your training." : undefined}

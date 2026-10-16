@@ -1,7 +1,8 @@
 /** Entry: route to sign-in, onboarding, or the plan depending on what's already saved. */
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { TechLoader } from "@/components/loader";
 import { Button } from "@/components/ui";
 import { backend } from "@/data";
 import { useSession } from "@/lib/session";
@@ -11,6 +12,7 @@ export default function Index() {
   const { setAccount, setAnswers } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [stage, setStage] = useState(0);
 
   useEffect(() => {
     let live = true;
@@ -20,9 +22,11 @@ export default function Index() {
         if (!live) return;
         if (!account) return router.replace("/sign-in");
         setAccount(account);
+        setStage(1);
         const saved = await backend.loadOnboarding();
         if (!live) return;
         if (saved) {
+          setStage(2);
           setAnswers(saved);
           router.replace("/plan");
         } else router.replace("/onboarding/race");
@@ -35,16 +39,11 @@ export default function Index() {
     };
   }, [attempt, setAccount, setAnswers]);
 
+  if (!error) return <TechLoader lines={["AUTHENTICATING", "LOADING ATHLETE PROFILE", "OPENING YOUR PLAN"]} stage={stage} />;
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space.xl, backgroundColor: color.concrete }}>
-      {error ? (
-        <>
-          <Text style={[type.body, { textAlign: "center", marginBottom: space.lg }]}>{error}</Text>
-          <Button title="Try again" onPress={() => { setError(null); setAttempt((n) => n + 1); }} />
-        </>
-      ) : (
-        <ActivityIndicator color={color.turf} accessibilityLabel="Loading" />
-      )}
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: space.xl, backgroundColor: color.bg }}>
+      <Text style={[type.body, { textAlign: "center", marginBottom: space.lg }]}>{error}</Text>
+      <Button title="Try again" onPress={() => { setError(null); setStage(0); setAttempt((n) => n + 1); }} />
     </View>
   );
 }

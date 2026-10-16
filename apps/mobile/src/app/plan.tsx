@@ -9,12 +9,88 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { generateHyroxPlan, HyroxPlanError, type PlannedWorkout, type PlanWeek, type TrainingPlan, type WorkoutStep } from "@adaptive-athlete/engine";
 import { Button, Callout, Heading, Screen } from "@/components/ui";
 import { backend } from "@/data";
-import { distance, longDate, minutes, paceRange, shortDate } from "@/lib/format";
+import { dashboardStats } from "@/lib/dashboard";
+import { distance, minutes, paceRange, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
-import { color, radius, space, type } from "@/lib/theme";
-import { toEngineInputs, type Units } from "@/onboarding/model";
+import { color, font, radius, space, type } from "@/lib/theme";
+import { toEngineInputs, type OnboardingAnswers, type Units } from "@/onboarding/model";
 
 const PHASE: Record<PlanWeek["phase"], string> = { base: "Base", build: "Build", peak: "Peak", taper: "Taper" };
+const LEVEL: Record<string, string> = { first_timer: "First-timer", intermediate: "Intermediate", advanced: "Advanced", competitive: "Competitive" };
+const DIVISION: Record<string, string> = { women_open: "Women Open", women_pro: "Women Pro", men_open: "Men Open", men_pro: "Men Pro" };
+const STATUS: Record<string, string> = { building: "Building up", consistent: "Training consistently", race_ready: "Race-ready" };
+const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const stamp = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return `${DOW[d.getUTCDay()]} ${MON[d.getUTCMonth()]} ${d.getUTCDate()} ${d.getUTCFullYear()}`; };
+
+/** Personal banner: who they are, the race, the countdown, and this week at a glance. */
+function Dashboard({ plan, answers, today }: { plan: TrainingPlan; answers: OnboardingAnswers; today: string }) {
+  const d = dashboardStats(plan, today);
+  const tags = [answers.level && LEVEL[answers.level], answers.division && DIVISION[answers.division], answers.trainingStatus && STATUS[answers.trainingStatus]].filter(Boolean).join(" · ");
+  const race = answers.eventLabel || "Race day";
+  return (
+    <View style={hud.card} accessibilityRole="summary">
+      {(["tl", "tr", "bl", "br"] as const).map((c) => <View key={c} style={[hud.corner, hud[c]]} />)}
+      <Text style={hud.tags} numberOfLines={1}>{tags.toUpperCase()}</Text>
+      <View style={hud.row}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={hud.race} numberOfLines={2}>{race.toUpperCase()}</Text>
+          <Text style={hud.date}>{stamp(d.raceDate)}</Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={hud.count} accessibilityLabel={`${d.daysToRace} days to race`}>{d.daysToRace}</Text>
+          <Text style={hud.label}>DAYS TO RACE</Text>
+        </View>
+      </View>
+
+      <View style={{ gap: 6 }}>
+        <View style={hud.rowTight}>
+          <Text style={hud.label}>WEEK {String(d.weekNumber).padStart(2, "0")}/{String(d.totalWeeks).padStart(2, "0")} · {PHASE[d.week.phase].toUpperCase()}{d.week.isRecoveryWeek ? " · LIGHTER" : ""}</Text>
+          {!d.started ? <Text style={hud.label}>STARTS {stamp(d.week.startDate).slice(0, 10)}</Text> : null}
+        </View>
+        <View style={hud.strip}>
+          {plan.weeks.map((w) => (
+            <View key={w.index} style={[hud.tick, w.index < d.week.index && hud.tickDone, w.index === d.week.index && hud.tickNow, w.phase === "taper" && w.index > d.week.index && hud.tickTaper]} />
+          ))}
+        </View>
+      </View>
+
+      <View style={hud.grid}>
+        <Stat label="THIS WEEK" value={`${d.thisWeek.sessions}`} unit="SESSIONS" sub={`${d.thisWeek.hard} hard · ${minutes(d.thisWeek.minutes)}`} />
+        <Stat label="RUN VOLUME" value={distance(d.thisWeek.runMeters, answers.units).split(" ")[0]!} unit={answers.units.toUpperCase()} sub="planned this week" />
+        <Stat
+          label="RACE-EFFORT PACE"
+          value={d.threshold ? paceRange(d.threshold.fastSecPerKm, d.threshold.slowSecPerKm, answers.units).replace(`/${answers.units}`, "") : "RPE"}
+          unit={d.threshold ? `/${answers.units.toUpperCase()}` : "7–8"}
+          sub={d.threshold ? "estimated from your benchmark" : "no benchmark yet"}
+          small={!!d.threshold}
+        />
+        <Stat label="FULL SIMS" value={`${d.fullSims.total}`} unit="PLANNED" sub={d.fullSims.next ? `next ${stamp(d.fullSims.next).slice(4, 10).trim()}` : "none left"} />
+      </View>
+
+      {d.next ? (
+        <View style={hud.next}>
+          <Text style={hud.label}>NEXT UP · {stamp(d.next.date).slice(0, 10)}</Text>
+          <Text style={hud.nextTitle} numberOfLines={2}>{d.next.title}</Text>
+          <Text style={hud.data}>{minutes(d.next.estimatedMinutes)}{d.next.plannedDistanceMeters ? ` · ${distance(d.next.plannedDistanceMeters, answers.units)}` : ""}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function Stat({ label, value, unit, sub, small = false }: { label: string; value: string; unit: string; sub: string; small?: boolean }) {
+  return (
+    <View style={hud.stat}>
+      <Text style={hud.label}>{label}</Text>
+      <Text style={[hud.value, small && { fontSize: 18 }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+        <Text style={hud.unit}> {unit}</Text>
+      </Text>
+      <Text style={hud.sub} numberOfLines={2}>{sub}</Text>
+    </View>
+  );
+}
 
 export default function PlanScreen() {
   const { answers, setAccount } = useSession();
@@ -39,8 +115,6 @@ export default function PlanScreen() {
   }
 
   const { plan } = result;
-  const raceDate = plan.goal.date;
-  const sims = plan.weeks.flatMap((w) => w.workouts).filter((w) => w.type === "full_simulation");
 
   return (
     <Screen
@@ -51,11 +125,8 @@ export default function PlanScreen() {
         </View>
       }
     >
-      <Heading
-        title={`${plan.weeks.length} weeks to race day`}
-        detail={`Racing ${longDate(raceDate)}. ${sims.length === 1 ? "One full race simulation" : `${sims.length} full race simulations`}, the last on ${longDate(sims.at(-1)?.date ?? raceDate)}.`}
-      />
-      <Callout>This is a preview built on your phone from your answers. Saving your plan, logging workouts and automatic adjustments come next.</Callout>
+      <Dashboard plan={plan} answers={answers} today={today} />
+      <Callout>This plan is built on your phone from your answers. Saving it, logging workouts and automatic adjustments come next.</Callout>
       {plan.basis.notes.map((n) => (
         <Callout key={n}>{n}</Callout>
       ))}
@@ -96,12 +167,12 @@ function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; 
   );
 }
 
-const RUN_TAG = { label: "Run", bg: color.turfSoft, fg: color.turf };
+const RUN_TAG = { label: "Run", bg: color.raised, fg: color.text };
 const TAG: Partial<Record<PlannedWorkout["sport"], { label: string; bg: string; fg: string }>> = {
   run: RUN_TAG,
   trail_run: RUN_TAG,
-  hyrox: { label: "HYROX", bg: color.ink, fg: color.surface },
-  strength: { label: "Strength", bg: color.note, fg: color.ink },
+  hyrox: { label: "HYROX", bg: color.accent, fg: color.onAccent },
+  strength: { label: "Strength", bg: color.accentSoft, fg: color.accent },
 };
 
 function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
@@ -113,7 +184,7 @@ function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
       <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={{ flexDirection: "row", gap: space.md }}>
         <Text style={[type.small, type.figure, { width: 84, paddingTop: 3 }]}>{shortDate(w.date)}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={[type.title, { fontSize: 19, lineHeight: 23 }, key && { color: color.turf }]}>{w.title}</Text>
+          <Text style={[type.title, { fontSize: 19, lineHeight: 23 }, key && { color: color.accent }]}>{w.title}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: 4 }}>
             <View style={[st.tag, { backgroundColor: tag.bg }]}>
               <Text style={[type.eyebrow, { fontSize: 10, lineHeight: 14, color: tag.fg }]}>{tag.label}</Text>
@@ -121,7 +192,7 @@ function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
             <Text style={[type.small, type.figure]}>{minutes(w.estimatedMinutes)}</Text>
           </View>
         </View>
-        <Text style={[type.title, { color: color.iron }]}>{open ? "−" : "+"}</Text>
+        <Text style={[type.title, { color: color.muted }]}>{open ? "−" : "+"}</Text>
       </Pressable>
       {open ? (
         <View style={{ marginTop: space.md, gap: space.md }}>
@@ -163,7 +234,7 @@ function Step({ s, units }: { s: WorkoutStep; units: Units }) {
   if (s.station) {
     const sp = s.station;
     return (
-      <Line accent={color.ink}>
+      <Line accent={color.text}>
         <Text style={type.strong}>
           {reps}
           {sp.recommended?.name ?? "No option available"}
@@ -185,7 +256,7 @@ function Step({ s, units }: { s: WorkoutStep; units: Units }) {
   const what = { warmup: "Warm-up", cooldown: "Cool-down", recovery: "Rest", work: "", steady: "", station: "" }[s.kind];
   const quiet = s.kind === "warmup" || s.kind === "cooldown" || s.kind === "recovery";
   return (
-    <Line accent={quiet ? color.rule : color.turf}>
+    <Line accent={quiet ? color.line : color.accent}>
       <Text style={quiet ? type.body : type.strong}>
         {what ? `${what}: ` : ""}
         {reps}
@@ -198,17 +269,47 @@ function Step({ s, units }: { s: WorkoutStep; units: Units }) {
   );
 }
 
-function Line({ children, accent = color.turf }: { children: ReactNode; accent?: string }) {
+function Line({ children, accent = color.accent }: { children: ReactNode; accent?: string }) {
   return <View style={[st.line, { borderLeftColor: accent }]}>{children}</View>;
 }
 
 const minutesSeconds = (sec: number): string => (sec < 120 ? `${Math.round(sec)} s` : sec % 60 === 0 ? `${sec / 60} min` : `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`);
 
+const C = 12;
+const hud = StyleSheet.create({
+  card: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.line, borderRadius: 4, padding: space.lg, gap: space.lg, marginBottom: space.lg },
+  corner: { position: "absolute", width: C, height: C, borderColor: color.accent },
+  tl: { top: -1, left: -1, borderTopWidth: 2, borderLeftWidth: 2 },
+  tr: { top: -1, right: -1, borderTopWidth: 2, borderRightWidth: 2 },
+  bl: { bottom: -1, left: -1, borderBottomWidth: 2, borderLeftWidth: 2 },
+  br: { bottom: -1, right: -1, borderBottomWidth: 2, borderRightWidth: 2 },
+  tags: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1.2, color: color.accent },
+  row: { flexDirection: "row", alignItems: "flex-end", gap: space.md },
+  rowTight: { flexDirection: "row", justifyContent: "space-between", gap: space.sm },
+  race: { fontFamily: font.display, fontSize: 30, lineHeight: 32, letterSpacing: 0.5, color: color.text },
+  date: { fontFamily: font.mono, fontSize: 12, letterSpacing: 1, color: color.muted, marginTop: 4 },
+  count: { fontFamily: font.monoBold, fontSize: 52, lineHeight: 54, color: color.accent, letterSpacing: -2 },
+  label: { fontFamily: font.mono, fontSize: 10, letterSpacing: 1.4, color: color.muted },
+  strip: { flexDirection: "row", gap: 2 },
+  tick: { flex: 1, height: 8, backgroundColor: color.raised },
+  tickDone: { backgroundColor: "#6B5A1C" },
+  tickNow: { backgroundColor: color.accent },
+  tickTaper: { backgroundColor: color.line },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  stat: { flexBasis: "47%", flexGrow: 1, backgroundColor: color.bg, borderRadius: 4, padding: space.md, gap: 2, minWidth: 0 },
+  value: { fontFamily: font.monoBold, fontSize: 24, lineHeight: 30, color: color.text },
+  unit: { fontFamily: font.mono, fontSize: 11, letterSpacing: 1, color: color.accent },
+  sub: { fontFamily: font.regular, fontSize: 12, lineHeight: 16, color: color.muted },
+  next: { borderLeftWidth: 3, borderLeftColor: color.accent, paddingLeft: space.md, gap: 2 },
+  nextTitle: { fontFamily: font.title, fontSize: 20, lineHeight: 24, color: color.text },
+  data: { fontFamily: font.mono, fontSize: 12, color: color.muted },
+});
+
 const st = StyleSheet.create({
-  week: { marginBottom: space.sm, borderRadius: radius.row, borderWidth: 1, borderColor: color.rule },
+  week: { marginBottom: space.sm, borderRadius: radius.row, borderWidth: 1, borderColor: color.line },
   weekOpen: { backgroundColor: color.surface, borderColor: color.surface },
   weekHead: { padding: space.lg, flexDirection: "row", alignItems: "flex-end" },
-  session: { borderTopWidth: 1, borderTopColor: color.concrete, paddingVertical: space.md },
+  session: { borderTopWidth: 1, borderTopColor: color.bg, paddingVertical: space.md },
   tag: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
   work: { gap: space.sm },
   line: { borderLeftWidth: 3, paddingLeft: space.md, paddingVertical: 2 },

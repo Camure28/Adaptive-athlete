@@ -9,6 +9,7 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 ## 2026-10-16 — claude.ai Project chat (build session, continued)
 - **Done:** rubric review applied, all approved with changes to A-2, A-3, P-7 (D-014). HYROX data terms researched (`INTEGRATIONS.md`): scraping results or events is not allowed without permission; ROXFIT isn't a listed HYROX partner. Race search at sign-up plus a manual past-result form with splits; name search built behind a switch, off until HYROX grants access (D-019). Partnership email drafted for Cameron.
 - **Open (Cameron):** run migrations `20261016000004` and `20261016000005` in the Supabase SQL Editor, in that order; send the HYROX partnership request (contact form at hyroxus.com/contact, or the US partnerships contact on hyroxus.com/sponsorships, or a warm intro through the gym's HYROX affiliate contact).
+- **Redesign (D-020):** black and signal-yellow theme, condensed uppercase headings, mono readouts, high-tech loading screens (startup, sign-in check, saving), and a personal dashboard banner on the plan screen. A combined database update file (`supabase_update_oct16.sql`, both migrations in one transaction) was sent to Cameron after he pasted a file name into the SQL Editor.
 - **Open (build):** step 5, save plans server-side as versions; step 6, workout logging; reconcile `packages/engine/src/adapt/` with the approved rubric.
 
 ## 2026-10-16 — claude.ai Project chat ("Product monetization strategy")
