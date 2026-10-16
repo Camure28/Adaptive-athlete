@@ -14,6 +14,7 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 - **Done:** product-owner feedback from the first phone test. Session variety: no repeats within a week, rotating formats week to week, strength Day A / Day B (D-016). Barlow fonts and a clearer session layout; text fields scroll above the keyboard (D-017). Clearer sign-in errors; email no longer case-sensitive. Added `CLAUDE.md`.
 - **Open:** Cameron to test on the phone. Coach review of the new session formats in `HYROX_WEEK.md`. First end-to-end sign-up and onboarding save against Supabase still unconfirmed.
 - **Sync incident:** this session overwrote the Project copy of DECISIONS.md, dropping D-013 to D-015 written by the monetization chat. Restored, and this session's entries renumbered D-016/D-017. This is why every session must pull and read before writing.
+- **Daily review:** scheduled task "Adaptive Athlete daily review" created, nightly 8:48 pm Mountain (review and doc sync only; reports whether it can reach the Project docs).
 - **Note:** Cameron is moving hands-on building to Claude Code on his Mac. Product and coaching decisions can happen in either place; both read these docs.
 
 ## 2026-10-15 — claude.ai Project chat
