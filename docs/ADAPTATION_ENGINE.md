@@ -1,6 +1,6 @@
 # Adaptation Engine — Rubric
 
-Status: **PARTLY APPROVED.** Drafted by Claude 2026-10-16. Rules marked **✓ approved** were signed off by the product owner on 2026-10-16 (see §10). All other thresholds are working defaults awaiting review, the same way the equipment ratings were set.
+Status: **APPROVED** by the product owner on 2026-10-16 (see §10), with changes to A-2, A-3 and P-7. Details marked *default, to confirm* are Claude's fill-ins where the product owner's note left a gap.
 
 Implementation note: `packages/engine` already contains adaptation logic shared by the running and HYROX generators (D-009). Reconcile the code with this rubric rule by rule; the rubric wins.
 
@@ -79,8 +79,8 @@ Notation: "hard session" = threshold, race-pace intervals, compromised run or si
 | ID | Condition | Decision | Explanation to athlete |
 |---|---|---|---|
 | S-1 ✓ approved | Pain ≥ 4/10, or pain in the same body area on 2 logs within 7 days | Remove movements that load that area for 7 days (via the limitations map); replace hard sessions in the next 3 days with easy or rest; ask a follow-up question | "You reported pain in X twice this week. We've removed movements that load it and eased the next 3 days. If it persists, check with a physio or coach." |
-| S-2 | Pain ≥ 7/10, or described as sharp / stopped the session | Rest only until the athlete reports improvement; no prescribing for that area | Same, with a stronger recommendation to see a professional |
-| S-3 | "Not feeling 100%" / illness flag | Next 2 days easy or rest; resume with A-3 rules if ≥ 7 days off | "Recover first. We'll ease you back in." |
+| S-2 ✓ approved | Pain ≥ 7/10, or described as sharp / stopped the session | Rest only until the athlete reports improvement; no prescribing for that area | Same, with a stronger recommendation to see a professional |
+| S-3 ✓ approved | "Not feeling 100%" / illness flag | Next 2 days easy or rest; resume with A-3 rules if ≥ 7 days off | "Recover first. We'll ease you back in." |
 
 Pain is recorded by **movement or body area, not diagnosis** (onboarding rule). The engine never names an injury.
 
@@ -90,39 +90,39 @@ Pain is recorded by **movement or body area, not diagnosis** (onboarding rule). 
 |---|---|---|
 | F-1 ✓ approved | Session RPE ≥ target + 2 on 2 of the last 3 hard sessions | Hold all progression |
 | F-2 ✓ approved | Session RPE ≥ target + 2 on 3 of the last 4 hard sessions | Reduce next week's hard-session volume by 20% (fewer reps / rounds); ask about sleep and stress |
-| F-3 | Easy-run average HR above the easy ceiling on 3 of the last 5 easy runs, at the same or slower pace | Hold progression; ask a clarification question (heat, illness, stress) |
-| F-4 | HRV 7-day average below baseline by > 1 SD **and** resting HR above baseline, for ≥ 3 days | Swap the next hard session for an easy session; recheck in 2 days |
-| F-5 | Fatigue or soreness ≥ 4/5 on 3 consecutive logs | Add a rest day in the next 3 days (replacing the lowest-priority session) |
+| F-3 ✓ approved | Easy-run average HR above the easy ceiling on 3 of the last 5 easy runs, at the same or slower pace | Hold progression; ask a clarification question (heat, illness, stress) |
+| F-4 ✓ approved | HRV 7-day average below baseline by > 1 SD **and** resting HR above baseline, for ≥ 3 days | Swap the next hard session for an easy session; recheck in 2 days |
+| F-5 ✓ approved | Fatigue or soreness ≥ 4/5 on 3 consecutive logs | Add a rest day in the next 3 days (replacing the lowest-priority session) |
 
 ### A — Adherence
 
 | ID | Condition | Decision |
 |---|---|---|
-| A-1 | 1 missed session | Don't make it up. If it was a key session (threshold, compromised, simulation) and a non-adjacent day is free this week, move it; otherwise drop it |
-| A-2 | 2+ missed sessions in a week | Next week: keep the key sessions, trim total volume 10–20%; no progression |
-| A-3 | 7–13 consecutive days missed | Re-entry week at ~70% of planned volume, then resume the plan |
-| A-4 | 14+ consecutive days missed | Reassess the block (decision 8) and ask the athlete; may push phases or lower goals |
-| A-5 | Unplanned hard training logged | Counts toward the hard-day limit; move the next hard session if it would be back-to-back |
+| A-1 ✓ approved | 1 missed session | Don't make it up. If it was a key session (threshold, compromised, simulation) and a non-adjacent day is free this week, move it; otherwise drop it |
+| A-2 ✓ approved, changed | 2+ missed sessions in a week | Ask the athlete first whether they would like to pull back next week. If yes: keep the key sessions and trim total volume 10–20%. Either way, hold progression for that week. *Default, to confirm:* no answer within 48 h keeps the plan as written |
+| A-3 ✓ approved, changed | 7–13 consecutive days missed | Notify the athlete and ask what is happening and how they want to resume: on vacation or taking time off (pause the plan, with a return date), or ready to resume (re-entry week at ~70% of planned volume, then the plan resumes). Athletes can also mark vacation or time off ahead of time. *Default, to confirm:* the check-in is sent after 4 days with nothing logged |
+| A-4 ✓ approved | 14+ consecutive days missed | Reassess the block (decision 8) and ask the athlete; may push phases or lower goals |
+| A-5 ✓ approved | Unplanned hard training logged | Counts toward the hard-day limit; move the next hard session if it would be back-to-back |
 
 ### P — Progression
 
 | ID | Condition | Decision |
 |---|---|---|
 | P-1 ✓ approved | Threshold or race-pace session: all reps within the pace band (or ≤ 3% faster) at RPE ≤ target, on 2 consecutive sessions of that type, with no F flags | Progress the next one: add 1 rep **or** 2% faster pace, alternating |
-| P-2 | Reps more than 3% faster than the band on 3 sessions | Trigger T-1 (pace recalculation) instead of piling on reps |
+| P-2 ✓ approved | Reps more than 3% faster than the band on 3 sessions | Trigger T-1 (pace recalculation) instead of piling on reps |
 | P-3 ✓ approved | Missed the pace band on half or more of the reps, or RPE ≥ target + 2 | Repeat the session next time; if it happens twice, ease pace 2% or remove 1 rep |
 | P-4 ✓ approved | Compromised run: station or substitute completed at prescribed volume, run splits within band, RPE ≤ target, on 2 sessions | Step station volume up 25% of race volume toward the level's ceiling (100%), for every level; once at 100%, progress run pace via P-1 |
-| P-5 | Compromised run: later 1 km runs > 5% slower than the first | Hold station progression; keep the session as-is to build pacing |
-| P-6 | Strength: all sets completed at prescribed load with ≥ 2 reps in reserve, on 2 sessions | +5% load lower body, +2.5% upper body |
-| P-7 | One station is consistently the slowest relative to the level's station-time estimate (≥ 3 logs) | Add a short technique block for that station to station-endurance sessions ("weakest station" focus) |
+| P-5 ✓ approved | Compromised run: later 1 km runs > 5% slower than the first | Hold station progression; keep the session as-is to build pacing |
+| P-6 ✓ approved | Strength: all sets completed at prescribed load with ≥ 2 reps in reserve, on 2 sessions | +5% load lower body, +2.5% upper body |
+| P-7 ✓ approved, changed | One station is consistently the slowest relative to the level's station-time estimate (≥ 3 logs) | "Weakest station" focus: add a short technique block for that station to station-endurance sessions **and** program it more often, so it appears in compromised runs or station work at least once every week until it is no longer the slowest. *Default, to confirm:* the extra exposure replaces a different station, so weekly station volume doesn't grow |
 
 ### T — Targets
 
 | ID | Condition | Decision |
 |---|---|---|
-| T-1 | Valid benchmark faster than current fitness, or P-2 fired | Recalculate paces; apply at most 3% per week, the rest over following weeks |
-| T-2 | Valid benchmark slower than current fitness | Apply only if confirmed by a second data point (another benchmark, or P-3 on 2 session types) and no illness flag |
-| T-3 | Half or full simulation logged | Update the athlete's station-time estimates (used to set substitute durations) |
+| T-1 ✓ approved | Valid benchmark faster than current fitness, or P-2 fired | Recalculate paces; apply at most 3% per week, the rest over following weeks |
+| T-2 ✓ approved | Valid benchmark slower than current fitness | Apply only if confirmed by a second data point (another benchmark, or P-3 on 2 session types) and no illness flag |
+| T-3 ✓ approved | Half or full simulation logged | Update the athlete's station-time estimates (used to set substitute durations) |
 
 ### B — Block and level
 
@@ -130,9 +130,9 @@ Level changes move the athlete between First-timer, Intermediate, Advanced and C
 
 | ID | Condition | Decision |
 |---|---|---|
-| B-1 | Race date changed | Regenerate phases from today, keeping history and current fitness |
+| B-1 ✓ approved | Race date changed | Regenerate phases from today, keeping history and current fitness |
 | B-2 ✓ approved | Performance consistent with the next level up for ≥ 4 weeks | **Suggest** moving up; never automatic |
-| B-3 | Equipment or limitations changed | Re-run substitutions (D-003, D-011) |
+| B-3 ✓ approved | Equipment or limitations changed | Re-run substitutions (D-003, D-011) |
 | B-4 ✓ approved | Athlete chooses to move down a level, at any time, based on how they're feeling | Apply from the next training week: lower volume ceiling, fewer hard days and the lower level's session mix; race date and current paces kept. Ask one optional question ("What's driving this?" — too hard / too much time / tired or run down / other) to shape the explanation. No diagnosis asked |
 | B-5 ✓ approved | Engine sees the athlete struggling: F-2 fired in 2 of the last 3 weeks, **or** A-2 fired 2 weeks in a row, **or** P-3 fired on 2+ session types for 2 weeks | **Suggest** moving down a level, explaining why; never automatic. If declined, don't suggest again for 2 weeks unless S or F-2 fires |
 
@@ -142,7 +142,7 @@ After moving down, moving back up goes through B-2 (≥ 4 weeks of evidence), so
 
 | ID | Condition | Decision |
 |---|---|---|
-| Q-1 | A rule's data gate fails on a signal that matters (e.g., a key session with no RPE) | Ask one short question in the post-workout screen; no change until answered or 48 h pass |
+| Q-1 ✓ approved | A rule's data gate fails on a signal that matters (e.g., a key session with no RPE) | Ask one short question in the post-workout screen; no change until answered or 48 h pass |
 
 ## 7. Weekly review (athlete-facing)
 
@@ -189,5 +189,9 @@ Each rule gets unit tests at its threshold edges, plus synthetic athlete histori
 | 2026-10-16 | P-4 station volume step: 25% of race volume for every level | Approved as drafted |
 | 2026-10-16 | Movements return 7 days after a pain report | Approved as drafted — S-1 |
 | 2026-10-16 | Level changes in both directions; athletes may move down based on how they feel | Approved — B-2, B-4, B-5 added |
+| 2026-10-16 | S-2, S-3, F-3–F-5, A-1, A-4, A-5, P-2, P-5, P-6, T-1–T-3, B-1, B-3, Q-1; all guardrails (§4) and data gates (§5) | Approved as drafted (review page) |
+| 2026-10-16 | A-2 missed sessions | Changed: ask the athlete before trimming |
+| 2026-10-16 | A-3 days off | Changed: notify the athlete and let them pause (vacation, time off) or choose how to resume |
+| 2026-10-16 | P-7 weakest station | Changed: technique block plus more frequent exposure to that station |
 
-Remaining rules (S-2, S-3, F-3 to F-5, A-1 to A-5, P-2, P-5 to P-7, T-1 to T-3, B-1, B-3, Q-1) and the guardrail and data-gate defaults await review.
+All rules, guardrails and data gates are approved. Open: the three *default, to confirm* details in A-2, A-3 and P-7. A-3 needs push notifications and a pause/vacation feature in the app (Phase 4).
