@@ -232,6 +232,11 @@ do $$ begin
   raise exception 'FAILED: anon saved onboarding';
 exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot save onboarding';
 end $$;
+do $$ begin
+  perform public.export_my_data();
+  raise exception 'FAILED: anon called export';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot call any app function (Supabase defaults removed)';
+end $$;
 commit;
 
 -- ---------------------------------------------------------------------------------------------
