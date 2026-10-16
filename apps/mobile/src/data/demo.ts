@@ -1,6 +1,13 @@
 /** Demo mode: in-memory only. Never used when a Supabase project is configured. */
 import type { OnboardingAnswers } from "@/onboarding/model";
-import { BackendError, type Account, type Backend } from "./backend";
+import { BackendError, type Account, type Backend, type HyroxEvent } from "./backend";
+
+/** Demo-mode sample races only; the real list lives in the database. */
+const DEMO_EVENTS: HyroxEvent[] = [
+  { id: "demo-denver", name: "HYROX Denver (demo)", city: "Denver", region: "CO", country: "USA", venue: null, startDate: "2026-11-12", endDate: "2026-11-15", verified: false },
+  { id: "demo-phoenix", name: "HYROX Phoenix (demo)", city: "Phoenix", region: "AZ", country: "USA", venue: "State Farm Stadium", startDate: "2027-02-25", endDate: "2027-02-28", verified: false },
+  { id: "demo-las-vegas", name: "HYROX Las Vegas (demo)", city: "Las Vegas", region: "NV", country: "USA", venue: null, startDate: "2027-03-12", endDate: "2027-03-14", verified: false },
+];
 
 export class DemoBackend implements Backend {
   readonly mode = "demo" as const;
@@ -26,6 +33,9 @@ export class DemoBackend implements Backend {
   async saveOnboarding(answers: OnboardingAnswers) {
     if (!this.account) throw new BackendError("Sign in to save your answers.");
     this.answers = structuredClone(answers);
+  }
+  async listEvents(today: string) {
+    return DEMO_EVENTS.filter((e) => e.endDate >= today);
   }
   async loadOnboarding() {
     return this.answers ? structuredClone(this.answers) : null;

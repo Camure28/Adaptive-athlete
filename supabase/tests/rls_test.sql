@@ -205,8 +205,10 @@ select public.save_hyrox_onboarding('{
   "units": "km", "level": "first_timer", "trainingStatus": "race_ready", "wantsDoubles": null, "gymTypes": ["crossfit"],
   "availableDays": [0,2,3,5], "longDay": 5, "weekdayMinutes": 60, "weekendMinutes": 90, "weeklyRunMeters": 16093,
   "equipment": ["outdoor_run", "rower"], "limitations": [], "limitationNote": "",
-  "raceDate": "2027-03-06", "division": "women_open", "targetFinishSeconds": 5400,
-  "results": [{"kind": "run", "date": "2026-09-20", "distanceMeters": 5000, "finishSeconds": 1680, "timing": "self_reported"}],
+  "raceDate": "2027-03-06", "division": "women_open", "targetFinishSeconds": 5400, "eventId": "phoenix-2027-02",
+  "results": [{"kind": "run", "date": "2026-09-20", "distanceMeters": 5000, "finishSeconds": 1680, "timing": "self_reported"},
+              {"kind": "hyrox", "date": "2026-05-02", "distanceMeters": null, "finishSeconds": 5520, "timing": "self_reported",
+               "division": "women_open", "splits": {"runs": [300, 310, null, null, null, null, null, null], "stations": {"skierg": 270}}}],
   "consentHealthData": true, "policyVersion": "v1"
 }'::jsonb);
 select pg_temp.expect((select count(*) from public.athletes) = 1 and (select units from public.athletes) = 'km',
@@ -215,9 +217,17 @@ select pg_temp.expect((select count(*) from public.athlete_equipment) = 2, 're-s
 select pg_temp.expect((select count(*) from public.athlete_limitations) = 0, 're-saving replaces limitations');
 select pg_temp.expect((select count(*) from public.goals) = 1 and (select event_date from public.goals) = '2027-03-06',
   're-saving updates the active goal instead of adding another');
-select pg_temp.expect((select count(*) from public.race_results) = 1, 're-saving does not duplicate results');
+select pg_temp.expect((select count(*) from public.race_results where kind = 'run') = 1, 're-saving does not duplicate results');
 select pg_temp.expect((select count(*) from public.consents) = 1, 'consent is recorded once per policy version');
 select pg_temp.expect((select training_status from public.hyrox_profiles) = 'race_ready', 'training status is saved and updated on re-save');
+select pg_temp.expect((select hyrox_event_id from public.goals) = 'phoenix-2027-02', 'the chosen HYROX event is saved on the goal');
+select pg_temp.expect((select (splits -> 'stations' ->> 'skierg')::int from public.race_results where kind = 'hyrox') = 270, 'HYROX result splits are saved');
+select pg_temp.expect((select count(*) from public.hyrox_events) > 20, 'signed-in athletes can read the race list');
+do $$ begin
+  insert into public.hyrox_events (id, name, city, country, start_date, end_date, source_url) values ('fake-1', 'x', 'x', 'x', '2027-01-01', '2027-01-01', 'x');
+  raise exception 'FAILED: athlete inserted a race';
+exception when insufficient_privilege then raise notice 'ok - athletes cannot add or change races';
+end $$;
 do $$ begin
   perform public.save_hyrox_onboarding('{"units":"mi","level":"elite","availableDays":[0],"weekdayMinutes":60,"weekendMinutes":60,"weeklyRunMeters":0,"equipment":[],"limitations":[],"raceDate":"2027-01-01","division":"women_open"}'::jsonb);
   raise exception 'FAILED: invalid level saved';
@@ -237,6 +247,11 @@ do $$ begin
   perform public.export_my_data();
   raise exception 'FAILED: anon called export';
 exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot call any app function (Supabase defaults removed)';
+end $$;
+do $$ begin
+  perform 1 from public.hyrox_events;
+  raise exception 'FAILED: anon read races';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot read the race list';
 end $$;
 commit;
 

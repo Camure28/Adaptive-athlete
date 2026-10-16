@@ -16,6 +16,9 @@ When a new file appears in `supabase/migrations/`, run **only that file** in the
 | Migration | What it adds | Applied to live project |
 |---|---|---|
 | `20261016000004_training_status.sql` | Training status on the HYROX profile (D-018) | Not yet |
+| `20261016000005_hyrox_events.sql` | Race list (37 events), chosen race on the goal, result splits (D-019) | Not yet |
+
+To add or fix a race later: SQL Editor → `insert into hyrox_events (...) values (...)` or `update hyrox_events set ... where id = '...'`. Set `verified = true` once checked against HYROX's own announcement.
 
 ## 3. Connect the app
 Project Settings → API keys. Copy:

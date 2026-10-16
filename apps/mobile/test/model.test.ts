@@ -109,3 +109,19 @@ describe("training status", () => {
     expect(suggestStatusFromPastRace(complete, "09/27/2026", TODAY).trainingStatus).toBeUndefined();
   });
 });
+
+describe("race picker and past result splits", () => {
+  it("asks for the race day when an event is picked but no day chosen", () => {
+    expect(validateStep("race", { ...complete, eventId: "denver-2026-11", raceDate: "" }, TODAY).raceDate).toMatch(/which day/);
+    expect(toSavePayload({ ...complete, eventId: "denver-2026-11", raceDate: "11/14/2026" }, TODAY).eventId).toBe("denver-2026-11");
+  });
+  it("saves splits only when some are given, and rejects badly typed ones", () => {
+    const withPast = { ...complete, level: "intermediate" as const, pastHyroxTime: "1:32:10", pastHyroxDate: "05/02/2026" };
+    const none = toSavePayload(withPast, TODAY).results.find((r) => r.kind === "hyrox");
+    expect(none?.splits).toBeNull();
+    const runs = ["4:35", "4:50", "", "", "", "", "", ""];
+    const some = toSavePayload({ ...withPast, pastRunSplits: runs, pastStationSplits: { skierg: "4:30" } }, TODAY).results.find((r) => r.kind === "hyrox");
+    expect(some?.splits).toEqual({ runs: [275, 290, null, null, null, null, null, null], stations: { skierg: 270 } });
+    expect(validateStep("experience", { ...withPast, pastRunSplits: ["4.35", "", "", "", "", "", "", ""] }, TODAY).pastSplits).toBeDefined();
+  });
+});

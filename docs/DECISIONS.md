@@ -94,3 +94,9 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Why:** Athletes racing back to back are already fit; restarting them with weeks of easy base wastes their training and their trust.
 **Status:** Accepted (product owner 2026-10-16). The 2-week base for "Training consistently" is Claude's default, awaiting coach review. Needs migration `20261016000004_training_status.sql` applied to the live Supabase project.
 
+## D-019 — Race search and past results at sign-up (2026-10-16)
+**Decision:** At sign-up athletes search a list of upcoming HYROX races by city or name, pick theirs, and choose their race day; "My race isn't listed" falls back to typing the date. For past results, the "find my results by name" search is built behind a switch (`apps/mobile/src/data/results.ts`) and stays off until HYROX grants data access; until then athletes enter their finish time with optional run and station splits. No screenshot import (product owner).
+**Why:** HYROX's terms forbid automatically copying results or event data from their sites without permission (`docs/INTEGRATIONS.md`). The product owner is requesting a partnership and data licence from HYROX; the screens are ready to switch to official data when it's granted.
+**Race list:** maintained by us by hand from public announcements (table `hyrox_events`, migration `20261016000005_hyrox_events.sql`), each row with its source and marked unverified until checked against HYROX's announcement. Athletes can read it; only the SQL Editor (service role) can change it. Seeded with 37 events from October 2026 to June 2027.
+**Status:** Accepted (product owner 2026-10-16). Licence request pending.
+

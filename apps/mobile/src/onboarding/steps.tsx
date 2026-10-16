@@ -1,9 +1,12 @@
 /** The seven onboarding screens (docs/ONBOARDING.md). Each renders questions only; navigation lives in the route. */
-import { Text, View } from "react-native";
-import { EQUIPMENT, type Equipment, type GymType, type HyroxLevel, type TrainingStatus, type Weekday } from "@adaptive-athlete/engine";
-import { Callout, Choice, Field, Heading, Pills, Question, Stepper } from "@/components/ui";
+import { useEffect, useMemo, useState } from "react";
+import { Linking, Pressable, Text, View } from "react-native";
+import { EQUIPMENT, STATION_NAMES, STATION_ORDER, addDays, type Equipment, type GymType, type HyroxLevel, type TrainingStatus, type Weekday } from "@adaptive-athlete/engine";
+import { backend, type HyroxEvent } from "@/data";
+import { resultsProvider } from "@/data/results";
+import { Button, Callout, Choice, Field, Heading, Pills, Question, Stepper } from "@/components/ui";
 import { localToday } from "@/lib/session";
-import { space, type } from "@/lib/theme";
+import { color, radius, space, type } from "@/lib/theme";
 import {
   applyGymTypes,
   doublesQuestionApplies,
@@ -33,13 +36,91 @@ const DIVISIONS: { value: Division; label: string }[] = [
   { value: "men_pro", label: "Men Pro" },
 ];
 
+// ---- Race picker ------------------------------------------------------------------------------
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const parts = (iso: string) => { const d = new Date(`${iso}T00:00:00Z`); return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate(), w: d.getUTCDay() }; };
+export function eventDates(e: Pick<HyroxEvent, "startDate" | "endDate">): string {
+  const s = parts(e.startDate), f = parts(e.endDate);
+  if (e.startDate === e.endDate) return `${MON[s.m]} ${s.d}, ${s.y}`;
+  return s.m === f.m ? `${MON[s.m]} ${s.d}–${f.d}, ${f.y}` : `${MON[s.m]} ${s.d} – ${MON[f.m]} ${f.d}, ${f.y}`;
+}
+const toUs = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8, 10)}/${iso.slice(0, 4)}`;
+const fromUs = (us: string) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(us); return m ? `${m[3]}-${m[1]}-${m[2]}` : null; };
+const place = (e: HyroxEvent) => [e.city, e.region ?? e.country].join(", ");
+
+function RacePicker({ a, update, error }: { a: OnboardingAnswers; update: StepProps["update"]; error?: string }) {
+  const [events, setEvents] = useState<HyroxEvent[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [query, setQuery] = useState("");
+  const [manual, setManual] = useState(a.eventId === null && a.raceDate !== "");
+  useEffect(() => {
+    let live = true;
+    backend.listEvents(localToday()).then((ev) => live && setEvents(ev)).catch(() => live && setLoadError(true));
+    return () => { live = false; };
+  }, []);
+  const picked = events?.find((e) => e.id === a.eventId) ?? null;
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = events ?? [];
+    return (q ? list.filter((e) => `${e.name} ${e.city} ${e.region ?? ""} ${e.country}`.toLowerCase().includes(q)) : list).slice(0, 8);
+  }, [events, query]);
+
+  if (manual || loadError) {
+    return (
+      <Question label="When is your race?" help={loadError ? "The race list didn't load, so enter your race date." : undefined} error={error}>
+        <Field value={a.raceDate} onChangeText={(raceDate) => update({ raceDate, eventId: null, eventLabel: "" })} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" invalid={!!error} accessibilityLabel="Race date" />
+        {!loadError ? <Button kind="quiet" title="Search the race list instead" onPress={() => setManual(false)} /> : null}
+      </Question>
+    );
+  }
+
+  if (picked) {
+    const days: string[] = [];
+    for (let d = picked.startDate; d <= picked.endDate; d = addDays(d, 1)) days.push(d);
+    const chosen = fromUs(a.raceDate);
+    return (
+      <>
+        <Question label="Your race">
+          <View style={[st.event, st.eventOn]}>
+            <Text style={type.strong}>{picked.name}</Text>
+            <Text style={type.small}>{place(picked)} · {eventDates(picked)}</Text>
+          </View>
+          <Button kind="quiet" title="Change race" onPress={() => update({ eventId: null, eventLabel: "", raceDate: "" })} />
+        </Question>
+        {days.length > 1 ? (
+          <Question label="Which day are you racing?" help="It's on your ticket. Not sure yet? Pick the first day; you can change it later." error={error}>
+            <Pills label="Race day" options={days.map((d) => { const p = parts(d); return { value: d, label: `${DOW[p.w]} ${p.d}`, a11y: `${DOW[p.w]} ${MON[p.m]} ${p.d}` }; })} isOn={(d) => chosen === d} onToggle={(d) => update({ raceDate: toUs(d) })} />
+          </Question>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <Question label="Find your race" help="Search by city or event name." error={error}>
+      <Field value={query} onChangeText={setQuery} placeholder="e.g. Denver" autoCorrect={false} accessibilityLabel="Search races" />
+      <View style={{ marginTop: space.sm }}>
+        {events === null ? <Text style={type.small}>Loading races…</Text> : null}
+        {events !== null && matches.length === 0 ? <Text style={type.small}>No upcoming races match "{query.trim()}".</Text> : null}
+        {matches.map((e) => (
+          <Pressable key={e.id} accessibilityRole="button" onPress={() => update({ eventId: e.id, eventLabel: e.name, raceDate: e.startDate === e.endDate ? toUs(e.startDate) : "" })} style={({ pressed }) => [st.event, pressed && { opacity: 0.85 }]}>
+            <Text style={type.strong}>{e.name}</Text>
+            <Text style={type.small}>{place(e)} · {eventDates(e)}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Button kind="quiet" title="My race isn't listed" onPress={() => { setManual(true); update({ eventId: null, eventLabel: "" }); }} />
+    </Question>
+  );
+}
+
 function Race({ a, update, errors }: StepProps) {
   return (
     <>
       <Heading title="Your race" detail="Your race date sets how long your plan is. Your division sets the station weights you'll train with." />
-      <Question label="When is your race?" error={errors.raceDate}>
-        <Field value={a.raceDate} onChangeText={(raceDate) => update({ raceDate })} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" invalid={!!errors.raceDate} accessibilityLabel="Race date" />
-      </Question>
+      <RacePicker a={a} update={update} error={errors.raceDate} />
       <Question label="Which division are you racing?" error={errors.division}>
         {DIVISIONS.map((d) => (
           <Choice key={d.value} label={d.label} selected={a.division === d.value} onPress={() => update({ division: d.value })} />
@@ -82,12 +163,7 @@ function Experience({ a, update, errors }: StepProps) {
         ))}
       </Question>
       {a.level && a.level !== "first_timer" ? (
-        <Question label="Your best recent HYROX time (optional)" help="Skip this if you don't have it to hand." error={errors.pastHyroxTime ?? errors.pastHyroxDate}>
-          <View style={{ flexDirection: "row", gap: space.sm }}>
-            <Field style={{ flex: 1 }} value={a.pastHyroxTime} onChangeText={(pastHyroxTime) => update({ pastHyroxTime })} placeholder="1:32:10" accessibilityLabel="Past HYROX finish time" />
-            <Field style={{ flex: 1 }} value={a.pastHyroxDate} onChangeText={(pastHyroxDate) => update(suggestStatusFromPastRace(a, pastHyroxDate, localToday()))} placeholder="MM/DD/YYYY" accessibilityLabel="Past HYROX race date" />
-          </View>
-        </Question>
+        <PastResult a={a} update={update} errors={errors} />
       ) : null}
       <Question label="Where's your training right now?" help="This sets where your plan starts, so you don't repeat an easy build-up you've already done." error={errors.trainingStatus}>
         {STATUS.map((st) => (
@@ -97,6 +173,47 @@ function Experience({ a, update, errors }: StepProps) {
     </>
   );
 }
+
+function PastResult({ a, update, errors }: { a: OnboardingAnswers; update: StepProps["update"]; errors: Errors }) {
+  const [showSplits, setShowSplits] = useState(a.pastRunSplits.some(Boolean) || Object.values(a.pastStationSplits).some(Boolean));
+  return (
+    <Question label="Your best recent HYROX result (optional)" help={resultsProvider ? undefined : "Skip this if you don't have it to hand. Splits help us find your strongest and weakest stations."} error={errors.pastHyroxTime ?? errors.pastHyroxDate ?? errors.pastSplits}>
+      <View style={{ flexDirection: "row", gap: space.sm }}>
+        <Field style={{ flex: 1 }} value={a.pastHyroxTime} onChangeText={(pastHyroxTime) => update({ pastHyroxTime })} placeholder="1:32:10" keyboardType="numbers-and-punctuation" accessibilityLabel="Past HYROX finish time" />
+        <Field style={{ flex: 1 }} value={a.pastHyroxDate} onChangeText={(pastHyroxDate) => update(suggestStatusFromPastRace(a, pastHyroxDate, localToday()))} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" accessibilityLabel="Past HYROX race date" />
+      </View>
+      <Button kind="quiet" title="Look up my result on the HYROX results site" onPress={() => { Linking.openURL("https://results.hyrox.com").catch(() => undefined); }} />
+      {showSplits ? (
+        <View style={{ gap: space.md, marginTop: space.sm }}>
+          <Text style={type.eyebrow}>Runs (each 1 km)</Text>
+          <View style={st.grid}>
+            {a.pastRunSplits.map((v, i) => (
+              <Field key={i} style={st.cell} value={v} onChangeText={(x) => { const next = [...a.pastRunSplits]; next[i] = x; update({ pastRunSplits: next }); }} placeholder={`Run ${i + 1}`} keyboardType="numbers-and-punctuation" accessibilityLabel={`Run ${i + 1} time`} />
+            ))}
+          </View>
+          <Text style={type.eyebrow}>Stations</Text>
+          <View style={st.grid}>
+            {STATION_ORDER.map((stn) => (
+              <View key={stn} style={st.cell}>
+                <Text style={[type.small, { marginBottom: 2 }]}>{STATION_NAMES[stn]}</Text>
+                <Field value={a.pastStationSplits[stn] ?? ""} onChangeText={(x) => update({ pastStationSplits: { ...a.pastStationSplits, [stn]: x } })} placeholder="m:ss" keyboardType="numbers-and-punctuation" accessibilityLabel={`${STATION_NAMES[stn]} time`} />
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : (
+        <Button kind="quiet" title="Add splits (optional)" onPress={() => setShowSplits(true)} />
+      )}
+    </Question>
+  );
+}
+
+const st = {
+  event: { padding: space.md, borderRadius: radius.row, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface, marginBottom: space.sm, gap: 2 },
+  eventOn: { borderColor: color.turf, backgroundColor: color.turfSoft },
+  grid: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: space.sm },
+  cell: { flexBasis: "47%" as const, flexGrow: 1 },
+};
 
 const BENCH: { value: BenchmarkDistance | null; label: string }[] = [
   { value: "5k", label: "5K" },
@@ -233,7 +350,7 @@ function Limitations({ a, update, errors }: StepProps) {
 
 function Review({ a, update, errors }: StepProps) {
   const rows: [string, string][] = [
-    ["Race date", a.raceDate],
+    ["Race", a.eventLabel ? `${a.eventLabel}, ${a.raceDate}` : a.raceDate],
     ["Division", DIVISIONS.find((d) => d.value === a.division)?.label ?? ""],
     ["Level", LEVELS.find((l) => l.value === a.level)?.label ?? ""],
     ["Training now", STATUS.find((st) => st.value === a.trainingStatus)?.label ?? ""],

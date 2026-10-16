@@ -29,7 +29,7 @@ Each entry records what the source allows, verified against its own published te
 2. **Athlete-owned import (no access to HYROX's sites):** the athlete screenshots their own result page and on-device text recognition fills in their time and splits for them to confirm. The library is to be chosen and verified when this is built.
 3. **Not acceptable:** scraping HYROX's sites, directly or through third-party scraper services, since the same terms apply.
 
-**Status:** blocked pending permission. Proposed path, awaiting product-owner decision:
+**Status:** automatic results lookup and the official event feed are blocked pending permission (request drafted 2026-10-16; send via HYROX's contact form or partnerships team). Built meanwhile (D-019): our own race list and a manual result form with optional splits; the name-search screen is wired to a `ResultsProvider` interface that stays off until a licensed source exists. The product owner ruled out screenshot import. Proposed path, awaiting product-owner decision:
 1. Ask HYROX for a data licence or partnership: results lookup by name and the event calendar.
 2. Meanwhile, compliant fallbacks: (a) the athlete enters their own past result (finish time, optional run and station splits) with a link that opens the HYROX results site in their browser to look it up; (b) a race list we maintain ourselves (event name, city, dates, divisions offered), typed in by hand from public announcements and stored in our database, plus "my race isn't listed".
 

@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EMPTY_ANSWERS, toSavePayload, type Division, type OnboardingAnswers } from "@/onboarding/model";
 import type { Equipment, GymType, HyroxLevel, Limitation, TrainingStatus, Weekday } from "@adaptive-athlete/engine";
-import { BackendError, type Account, type Backend } from "./backend";
+import { BackendError, type Account, type Backend, type HyroxEvent } from "./backend";
 
 export class SupabaseBackend implements Backend {
   readonly mode = "supabase" as const;
@@ -42,6 +42,20 @@ export class SupabaseBackend implements Backend {
     return { userId: data.user.id, email: data.user.email ?? email };
   }
 
+  async listEvents(today: string): Promise<HyroxEvent[]> {
+    const { data, error } = await this.db
+      .from("hyrox_events")
+      .select("id, name, city, region, country, venue, start_date, end_date, verified")
+      .eq("status", "scheduled")
+      .gte("end_date", today)
+      .order("start_date");
+    if (error) throw new BackendError("The race list couldn't be loaded. You can enter your race date instead.");
+    return (data ?? []).map((e) => ({
+      id: e.id, name: e.name, city: e.city, region: e.region, country: e.country, venue: e.venue,
+      startDate: e.start_date, endDate: e.end_date, verified: e.verified,
+    }));
+  }
+
   async signOut() {
     await this.db.auth.signOut();
   }
@@ -64,21 +78,29 @@ export class SupabaseBackend implements Backend {
     if (firstError) throw new BackendError("Your profile couldn't be loaded. Check your connection and try again.");
     if (!profile.data || !goal.data) return null;
 
+    let eventLabel = "";
     const run = (results.data ?? []).find((r) => r.kind === "run");
     const hyrox = (results.data ?? []).find((r) => r.kind === "hyrox");
     const benchMeters = run ? Number(run.distance_meters) : null;
     const knownLimits = (limits.data ?? []).filter((l) => l.movement !== "other");
+    if (goal.data.hyrox_event_id) {
+      const ev = await this.db.from("hyrox_events").select("name, start_date, end_date").eq("id", goal.data.hyrox_event_id).maybeSingle();
+      if (ev.data) eventLabel = ev.data.name;
+    }
     return {
       ...EMPTY_ANSWERS,
+      eventLabel,
       units: (athlete.data?.units ?? "mi") as "mi" | "km",
       raceDate: usDate(goal.data.event_date),
       division: goal.data.hyrox_division as Division,
       goal: goal.data.target_finish_seconds ? "time" : "finish",
       targetTime: goal.data.target_finish_seconds ? hms(goal.data.target_finish_seconds) : "",
+      eventId: goal.data.hyrox_event_id ?? null,
       level: profile.data.level as HyroxLevel,
       trainingStatus: (profile.data.training_status ?? null) as TrainingStatus | null,
       pastHyroxTime: hyrox ? hms(hyrox.finish_seconds) : "",
       pastHyroxDate: hyrox ? usDate(hyrox.event_date) : "",
+      ...splitsFrom(hyrox?.splits),
       weeklyRun: String(Math.round((profile.data.weekly_run_meters / ((athlete.data?.units ?? "mi") === "mi" ? 1609.344 : 1000)) * 10) / 10),
       benchmarkDistance: benchMeters === 5000 ? "5k" : benchMeters === 10000 ? "10k" : benchMeters ? "half_marathon" : null,
       benchmarkTime: run ? hms(run.finish_seconds) : "",
@@ -95,6 +117,14 @@ export class SupabaseBackend implements Backend {
       consentHealthData: true,
     };
   }
+}
+
+function splitsFrom(splits: unknown): Pick<OnboardingAnswers, "pastRunSplits" | "pastStationSplits"> {
+  const sp = (splits ?? {}) as { runs?: (number | null)[]; stations?: Record<string, number> };
+  return {
+    pastRunSplits: Array.from({ length: 8 }, (_, i) => (sp.runs?.[i] ? hms(sp.runs[i]!) : "")),
+    pastStationSplits: Object.fromEntries(Object.entries(sp.stations ?? {}).map(([k, v]) => [k, hms(v)])),
+  };
 }
 
 const usDate = (iso: string): string => {

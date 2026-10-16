@@ -12,6 +12,7 @@ import {
   type HyroxAthlete,
   type HyroxGoal,
   type HyroxLevel,
+  type HyroxStation,
   type Limitation,
   type RaceResult,
   type TrainingStatus,
@@ -29,6 +30,9 @@ export interface OnboardingAnswers {
   units: Units;
   // 1. Race
   raceDate: string; // as typed, MM/DD/YYYY
+  /** The HYROX event picked from our race list, or null for "my race isn't listed". */
+  eventId: string | null;
+  eventLabel: string;
   division: Division | null;
   goal: "finish" | "time";
   targetTime: string; // h:mm:ss
@@ -37,6 +41,9 @@ export interface OnboardingAnswers {
   trainingStatus: TrainingStatus | null;
   pastHyroxTime: string;
   pastHyroxDate: string;
+  /** Optional splits for the past HYROX result, as typed (m:ss). */
+  pastRunSplits: string[]; // 8 × 1 km
+  pastStationSplits: Partial<Record<HyroxStation, string>>;
   // 3. Running
   weeklyRun: string; // in `units`
   benchmarkDistance: BenchmarkDistance | null;
@@ -61,6 +68,8 @@ export interface OnboardingAnswers {
 export const EMPTY_ANSWERS: OnboardingAnswers = {
   units: "mi",
   raceDate: "",
+  eventId: null,
+  eventLabel: "",
   division: null,
   goal: "finish",
   targetTime: "",
@@ -68,6 +77,8 @@ export const EMPTY_ANSWERS: OnboardingAnswers = {
   trainingStatus: null,
   pastHyroxTime: "",
   pastHyroxDate: "",
+  pastRunSplits: ["", "", "", "", "", "", "", ""],
+  pastStationSplits: {},
   weeklyRun: "",
   benchmarkDistance: null,
   benchmarkTime: "",
@@ -87,7 +98,7 @@ export const EMPTY_ANSWERS: OnboardingAnswers = {
 export const STEPS = ["race", "experience", "running", "schedule", "equipment", "limitations", "review"] as const;
 export type Step = (typeof STEPS)[number];
 
-export type Errors = Partial<Record<keyof OnboardingAnswers, string>>;
+export type Errors = Partial<Record<keyof OnboardingAnswers | "pastSplits", string>>;
 
 // ---- Parsing ----------------------------------------------------------------------------------
 
@@ -122,7 +133,7 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
   switch (step) {
     case "race": {
       const iso = parseUsDate(a.raceDate);
-      if (!iso) e.raceDate = "Enter the race date as MM/DD/YYYY.";
+      if (!iso) e.raceDate = a.eventId ? "Pick which day you're racing." : "Enter the race date as MM/DD/YYYY.";
       else if (iso <= today) e.raceDate = "Pick a race date in the future.";
       if (!a.division) e.division = "Choose the division you're racing.";
       if (a.goal === "time" && parseTime(a.targetTime) === null) e.targetTime = "Enter a target time like 1:25:00, or choose Just finish.";
@@ -133,6 +144,9 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
       if (!a.trainingStatus) e.trainingStatus = "Choose where your training is right now.";
       if (a.pastHyroxTime && parseTime(a.pastHyroxTime) === null) e.pastHyroxTime = "Enter your time like 1:32:10.";
       if (a.pastHyroxTime && !parseUsDate(a.pastHyroxDate)) e.pastHyroxDate = "Add the race date as MM/DD/YYYY.";
+      if ([...a.pastRunSplits, ...Object.values(a.pastStationSplits)].some((x) => x && x.trim() !== "" && parseTime(x) === null)) {
+        e.pastSplits = "Enter splits like 4:35, or leave them blank.";
+      }
       break;
     case "running": {
       const v = Number(a.weeklyRun);
@@ -251,7 +265,7 @@ export function toSavePayload(a: OnboardingAnswers, today: string) {
   const pastTime = parseTime(a.pastHyroxTime);
   const pastDate = parseUsDate(a.pastHyroxDate);
   if (pastTime && pastDate) {
-    results.push({ kind: "hyrox", date: pastDate, distanceMeters: null, finishSeconds: pastTime, timing: "self_reported", division: a.division });
+    results.push({ kind: "hyrox", date: pastDate, distanceMeters: null, finishSeconds: pastTime, timing: "self_reported", division: a.division, splits: hyroxSplits(a) });
   }
   return {
     units: a.units,
@@ -268,6 +282,7 @@ export function toSavePayload(a: OnboardingAnswers, today: string) {
     limitations: a.limitations,
     limitationNote: a.limitationNote.trim(),
     raceDate: goal.date,
+    eventId: a.eventId,
     division: a.division,
     targetFinishSeconds: goal.targetFinishSeconds ?? null,
     results,
@@ -291,4 +306,15 @@ export function suggestStatusFromPastRace(a: OnboardingAnswers, pastHyroxDate: s
   const iso = parseUsDate(pastHyroxDate);
   const recent = iso !== null && iso <= today && daysBetween(iso, today) <= RECENT_RACE_DAYS;
   return recent && a.trainingStatus === null ? { pastHyroxDate, trainingStatus: "race_ready" } : { pastHyroxDate };
+}
+
+/** Splits as stored: run seconds by segment (null when blank) and station seconds by station. Null when none given. */
+export function hyroxSplits(a: OnboardingAnswers): { runs: (number | null)[]; stations: Partial<Record<HyroxStation, number>> } | null {
+  const runs = a.pastRunSplits.map((x) => (x ? parseTime(x) : null));
+  const stations: Partial<Record<HyroxStation, number>> = {};
+  for (const [k, v] of Object.entries(a.pastStationSplits) as [HyroxStation, string][]) {
+    const secs = v ? parseTime(v) : null;
+    if (secs) stations[k] = secs;
+  }
+  return runs.some((x) => x !== null) || Object.keys(stations).length > 0 ? { runs, stations } : null;
 }
