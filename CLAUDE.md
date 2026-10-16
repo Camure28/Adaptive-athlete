@@ -18,7 +18,7 @@ Several Claude sessions work on this project (claude.ai Project chats, Claude Co
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
 - `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
 - `supabase/`: migrations with row-level security; `pnpm db:test` runs the isolation tests on a local Postgres. `functions/generate-plan` builds and saves plans (D-022) and `functions/adapt-plan` adapts them after each log (D-026), using the engine bundled by `pnpm functions:build`; shared request code in `functions/_shared/request.ts`.
-- `docs/`: decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
+- `docs/`: release and TestFlight steps (`RELEASE.md`), decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
 
 ## Commands
 ```bash
@@ -26,6 +26,8 @@ npx pnpm@10.28.0 install
 pnpm -r typecheck && pnpm -r test && pnpm lint   # run before calling anything done
 cd apps/mobile && npx expo start                  # dev server; the iPhone app connects to it
 cd apps/mobile && npx expo run:ios --device       # rebuild/reinstall on the iPhone (needed after native changes, and every 7 days on a free Apple ID)
+pnpm ios:release                                   # release build on the iPhone: runs without the Mac (docs/RELEASE.md)
+pnpm testflight                                    # cloud build + upload to TestFlight; needs the paid Apple Developer Program and EAS setup (docs/RELEASE.md)
 cd packages/engine && npx tsx scripts/hyrox-sample.ts > ../../docs/samples/HYROX_SAMPLE_PLANS.md
 ```
 

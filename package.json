@@ -13,7 +13,9 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "db:test": "bash supabase/tests/run_rls_tests.sh",
     "functions:build": "node scripts/build-functions.mjs",
-    "functions:deploy": "pnpm functions:build && supabase functions deploy generate-plan adapt-plan --use-api"
+    "functions:deploy": "pnpm functions:build && supabase functions deploy generate-plan adapt-plan --use-api",
+    "ios:release": "pnpm --filter @adaptive-athlete/mobile ios:release",
+    "testflight": "cd apps/mobile && npx eas-cli@latest build --platform ios --profile production --auto-submit"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

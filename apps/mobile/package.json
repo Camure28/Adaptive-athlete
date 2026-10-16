@@ -36,7 +36,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "export:web": "expo export --platform web",
-    "ios:device": "expo run:ios --device"
+    "ios:device": "expo run:ios --device",
+    "ios:release": "expo run:ios --device --configuration Release --no-bundler"
   },
   "private": true
 }

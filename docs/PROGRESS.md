@@ -6,6 +6,10 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (release and TestFlight setup)
+- **Done:** the app can run on Cameron's iPhone without the Mac: `pnpm ios:release` installs a Release build with the code inside (free Apple ID, still 7 days). TestFlight is ready to switch on: `apps/mobile/eas.json` (development, preview and production profiles, each with its own EAS environment), `pnpm testflight` (cloud build and upload), and the export-compliance flag in `app.json` (HTTPS only). Steps, tester invites and a pre-tester checklist are in `docs/RELEASE.md`. Commands are checked against Expo's docs. Not run yet: release builds need the Mac.
+- **Open (Cameron):** try `pnpm ios:release` with the phone plugged in. When ready: Apple Developer Program, Expo account, `eas init`, two `eas env:set` commands (`RELEASE.md` §2). Before testers: the checklist in `RELEASE.md` §3 (email confirmation, privacy policy, account deletion, feedback link, real icon).
+
 ## 2026-10-16 — Claude Code on Cameron's Mac (review loop fix)
 - **Bug (found by Cameron on the phone):** after logging, the review screen called `adapt-plan` about 3 times a second (session helpers changed identity on every render and the screen's effect depended on them), so it looked stuck and stored 261 duplicate "no change" reviews. Fixed in the app (`d1499b8`): stable helpers, one run per visit.
 - **Safeguard:** `adapt-plan` returns the latest review when nothing has changed since (`reviewStillCurrent`, tested), so a bug in the app can't flood the history again. Needs `pnpm functions:deploy` (Cameron).
