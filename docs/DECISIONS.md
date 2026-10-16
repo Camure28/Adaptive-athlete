@@ -46,7 +46,7 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Status:** Noted for later.
 
 ## D-010 — App stack (2026-10-15)
-**Decision:** Expo SDK 58 (React Native 0.88, Expo Router) for iOS/Android, with web for previews; Supabase for auth and Postgres. pnpm workspace with hoisted node_modules, per Expo's monorepo guidance.
+**Decision:** Expo SDK 57 (React Native 0.86, Expo Router; originally SDK 58 beta, see D-012) for iOS/Android, with web for previews; Supabase for auth and Postgres. pnpm workspace with hoisted node_modules, per Expo's monorepo guidance.
 **Why:** Expo development builds support the native HealthKit access a browser app can't have; Supabase matches the Postgres + row-level-security design and has a free tier for development.
 **Details:** Onboarding is saved through one database function (`save_hyrox_onboarding`) so a save is all-or-nothing and still subject to row-level security. Without Supabase settings the app runs in a labelled demo mode (nothing saved). Plans are generated on the device for preview only; server-side plan storage comes next.
 **Status:** Accepted (product owner approved the stack 2026-10-15). Supabase project `adaptive-athlete` created by the product owner 2026-10-15 (Free plan); `supabase/setup.sql` applied; all 18 tables confirmed in the dashboard. App configured via git-ignored `apps/mobile/.env.local`.
@@ -54,3 +54,10 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 ## D-011 — Movement limitations affect station work (2026-10-15)
 **Decision:** An avoided movement removes every substitute that involves it. If the real race station involves it, the plan uses the closest safe option and says why; if none exists, the plan prescribes nothing for that block and suggests checking with a physio or coach.
 **Status:** Implemented (Claude), following the approved onboarding spec ("removes those exercises").
+
+## D-012 — Stable Expo SDK and Xcode builds (2026-10-15)
+**Decision:** Move the app from the Expo SDK 58 beta to SDK 57, the latest stable release (verified on expo.dev 2026-10-15). Run it on iPhones as a development build compiled with Xcode (`npx expo run:ios --device`) instead of Expo Go. Bundle ID `com.camure28.adaptiveathlete`.
+**Why:** The project was started on the SDK 58 beta by mistake (Claude). The App Store Expo Go app does not run it, and native builds should not depend on beta software. A development build is also the path HealthKit needs later.
+**Limits:** Builds signed with a free Apple ID expire after 7 days and can't be shared. TestFlight for pilot athletes needs the paid Apple Developer Program; decide before the gym pilot.
+**Details:** `pnpm-workspace.yaml` pins four Expo peer packages to SDK 57; update them with the SDK.
+**Status:** Accepted (product owner chose the Xcode route 2026-10-15).

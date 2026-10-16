@@ -2,3 +2,10 @@ packages:
   - "packages/*"
   - "apps/*"
 nodeLinker: hoisted
+# Keep Expo's peer packages on the app's SDK. Several Expo packages declare these
+# as "*" peers, which otherwise resolve to the newest SDK. Update with the SDK.
+overrides:
+  "@expo/metro-runtime": "~57.0.17"
+  "@expo/dom-webview": "~57.0.1"
+  "@expo/log-box": "~57.0.4"
+  "expo-font": "~57.0.4"
