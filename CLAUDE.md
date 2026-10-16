@@ -32,5 +32,5 @@ cd packages/engine && npx tsx scripts/hyrox-sample.ts > ../../docs/samples/HYROX
 ## Status (2026-10-16)
 - Done: engine (running + HYROX, adaptation rules, session variety), schema with tested isolation, onboarding, on-device plan preview, iPhone development build via Xcode (free Apple ID).
 - Supabase: email confirmation turned off for development; turn it back on before anyone else uses the app.
-- In progress: first end-to-end sign-up and onboarding save on the phone.
+- Verified 2026-10-16: sign-up and onboarding save to Supabase from the iPhone.
 - Next: save plans server-side (append-only versions), workout logging, adaptation in the app, UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).
