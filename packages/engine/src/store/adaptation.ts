@@ -92,6 +92,8 @@ export interface DecisionRow {
 
 /** The review the athlete sees. Changes are summarised; full before/after lives in the decisions. */
 export interface StoredReview {
+  /** The athlete's date the run was for; a review from another day is never reused. */
+  ranFor?: IsoDate;
   checked: { sessionsLogged: number; sources: DataSource[] };
   changed: { ruleId: string; whatChanged: string; why: string; nextSteps: string; sessions: string[] }[];
   kept: string[];
@@ -130,6 +132,7 @@ export const QUESTION_QUIET_DAYS = 2;
 export function reviewForStorage(review: WeeklyReview, answers: AdaptationInput["answers"] = [], today?: IsoDate): StoredReview {
   const recent = new Set((answers ?? []).filter((a) => !today || a.date >= addDays(today, -QUESTION_QUIET_DAYS)).map((a) => a.questionId));
   return {
+    ...(today ? { ranFor: today } : {}),
     checked: review.checked,
     changed: review.changed.map((d) => ({
       ruleId: d.ruleId,
@@ -143,3 +146,20 @@ export function reviewForStorage(review: WeeklyReview, answers: AdaptationInput[
     questions: review.questions.filter((q) => !recent.has(q.questionId)),
   };
 }
+
+/**
+ * Whether the latest stored review still answers "what does the engine say now?" (D-026 safeguard):
+ * it was run for today, on the plan version that is current, and nothing it reads has changed
+ * since (logs added or edited, answers, recovery data, race results). Then adapt-plan returns it
+ * instead of running again, so repeated calls can't fill the history.
+ */
+export function reviewStillCurrent(
+  latest: { review: StoredReview; resultVersion: number; createdAt: string } | null,
+  currentVersion: number,
+  today: IsoDate,
+  latestInputAt: string | null,
+): boolean {
+  if (!latest || latest.review.ranFor !== today || latest.resultVersion !== currentVersion) return false;
+  return latestInputAt === null || Date.parse(latestInputAt) <= Date.parse(latest.createdAt);
+}
+

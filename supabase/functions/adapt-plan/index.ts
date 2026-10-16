@@ -5,7 +5,9 @@
 //
 // Everything is read from the database with the caller's own token (row-level security); the
 // request carries only the athlete's local date. If another run saved a newer version first,
-// this one re-runs once on that version.
+// this one re-runs once on that version. If nothing has changed since the latest review (same
+// day, same version, no new logs, answers or results), that review is returned without running
+// again, so repeated calls can't fill the history.
 import {
   adaptPlan,
   adaptationInputFromRows,
@@ -15,6 +17,7 @@ import {
   planFromRecord,
   planToRecord,
   reviewForStorage,
+  reviewStillCurrent,
 } from "../_shared/engine.js";
 import { admin, caller, reply } from "../_shared/request.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
@@ -43,6 +46,10 @@ async function runOnce(asUser: SupabaseClient, today: string): Promise<Response 
     .eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (plan.error) return failed("plan read failed", plan.error.message);
   if (!plan.data) return reply(409, { error: "Build your plan first." });
+
+  const cached = await latestIfCurrent(asUser, plan.data.current_version, today);
+  if (cached instanceof Response) return cached;
+  if (cached) return reply(200, { version: plan.data.current_version, changed: false, review: cached, reused: true });
 
   const version = await asUser.from("plan_versions").select("id, version, created_at, basis, weeks, inputs")
     .eq("plan_id", plan.data.id).eq("version", plan.data.current_version).single();
@@ -95,3 +102,26 @@ async function runOnce(asUser: SupabaseClient, today: string): Promise<Response 
   if (error) return failed("save failed", error.message);
   return reply(200, { ...(data as Record<string, unknown>), review });
 }
+
+/** The latest review if it still applies (reviewStillCurrent), null to run, or an error reply. */
+async function latestIfCurrent(asUser: SupabaseClient, currentVersion: number, today: string) {
+  const newest = (table: string, column: string) => asUser.from(table).select(column).order(column, { ascending: false }).limit(1).maybeSingle();
+  const [review, log, answer, recovery, result] = await Promise.all([
+    asUser.from("plan_reviews").select("review, from_version, to_version, created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    newest("completed_workouts", "updated_at"),
+    newest("athlete_answers", "created_at"),
+    newest("daily_recovery", "created_at"),
+    newest("race_results", "created_at"),
+  ]);
+  const readError = [review, log, answer, recovery, result].find((r) => r.error)?.error;
+  if (readError) {
+    console.error("freshness read failed", readError.message);
+    return reply(500, { error: "Your plan couldn't be updated. Try again in a moment." });
+  }
+  if (!review.data) return null;
+  const times = [log.data?.updated_at, answer.data?.created_at, recovery.data?.created_at, result.data?.created_at].filter((t): t is string => !!t);
+  const latestInputAt = times.length ? times.reduce((a, b) => (Date.parse(a) > Date.parse(b) ? a : b)) : null;
+  const latest = { review: review.data.review, resultVersion: review.data.to_version ?? review.data.from_version, createdAt: review.data.created_at };
+  return reviewStillCurrent(latest, currentVersion, today, latestInputAt) ? review.data.review : null;
+}
+

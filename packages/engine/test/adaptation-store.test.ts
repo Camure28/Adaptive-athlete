@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptPlan } from "../src/adapt/engine.js";
 import { allWorkouts } from "../src/adapt/context.js";
-import { adaptationInputFromRows, decisionRows, reviewForStorage, type AdaptationRows } from "../src/store/adaptation.js";
+import { adaptationInputFromRows, decisionRows, reviewForStorage, reviewStillCurrent, type AdaptationRows, type StoredReview } from "../src/store/adaptation.js";
 import { fromManualLog, toLogRow } from "../src/store/logs.js";
 import { planFromRecord, planToRecord } from "../src/store/record.js";
 import type { TrainingPlan } from "../src/types.js";
@@ -138,3 +138,29 @@ describe("a server run end to end", () => {
     expect(reviewForStorage(result.review).kept.length).toBeGreaterThan(0);
   });
 });
+
+describe("reviewStillCurrent (repeat calls reuse the last review)", () => {
+  const review: StoredReview = { ranFor: "2026-11-03", checked: { sessionsLogged: 1, sources: ["manual"] }, changed: [], kept: ["No change"], waitingOn: [], questions: [] };
+  const latest = { review, resultVersion: 2, createdAt: "2026-11-03T19:24:22.000Z" };
+
+  it("reuses it when nothing changed since", () => {
+    expect(reviewStillCurrent(latest, 2, "2026-11-03", "2026-11-03T19:24:19.000Z")).toBe(true);
+    expect(reviewStillCurrent(latest, 2, "2026-11-03", null)).toBe(true);
+  });
+
+  it("runs again after a new or edited log, answer or result", () => {
+    expect(reviewStillCurrent(latest, 2, "2026-11-03", "2026-11-03T19:30:00.000Z")).toBe(false);
+  });
+
+  it("runs again on a new day, a newer plan version, or with no review yet", () => {
+    expect(reviewStillCurrent(latest, 2, "2026-11-04", null)).toBe(false);
+    expect(reviewStillCurrent(latest, 3, "2026-11-03", null)).toBe(false);
+    expect(reviewStillCurrent(null, 2, "2026-11-03", null)).toBe(false);
+    expect(reviewStillCurrent({ ...latest, review: { ...review, ranFor: undefined as never } }, 2, "2026-11-03", null)).toBe(false);
+  });
+
+  it("is stamped with the day it ran for", () => {
+    expect(reviewForStorage({ checked: { sessionsLogged: 0, sources: [] }, changed: [], kept: [], waitingOn: [], questions: [] }, [], "2026-11-03").ranFor).toBe("2026-11-03");
+  });
+});
+
