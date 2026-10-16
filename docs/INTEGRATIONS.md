@@ -19,6 +19,16 @@ Each entry records what the source allows, verified against its own published te
 
 **Conclusion:** pulling results or the event list automatically from HYROX's sites requires written permission from HYROX World GmbH. Other apps (e.g. ROXFIT, Hyranking) show HYROX results, but none we found states a licence, so their existence is not evidence that it's allowed. This is a reading of the published terms, not legal advice.
 
+**ROXFIT (competitor), checked 2026-10-16:**
+- ROXFIT Limited (London) is not on HYROX's published list of Official Online Training Partners: Centr, FIIT, Runna, LEVLS, MyCoach, The Ultimate You, Getahead, Relentless Method, RJ Coaching, ENDUR, HWPO, PRVN and KZN Fitness (hyroxus.com, checked 2026-10-16). Repz also announced the title in August 2026.
+- Its App Store listing claims no affiliation, and an independent comparison describes it as independent.
+- It says its results come "from HYROX's official timing" and refreshes them from HYROX. Whether it has a private data agreement is not public.
+
+**Ways to offer the same feature:**
+1. **Official:** apply to become an HYROX Official Online Training Partner and ask for results and event data access as part of the deal. The partner programme exists; how to apply isn't published, so start through HYROX's contact form and the product owner's HYROX affiliate contacts.
+2. **Athlete-owned import (no access to HYROX's sites):** the athlete screenshots their own result page and on-device text recognition fills in their time and splits for them to confirm. The library is to be chosen and verified when this is built.
+3. **Not acceptable:** scraping HYROX's sites, directly or through third-party scraper services, since the same terms apply.
+
 **Status:** blocked pending permission. Proposed path, awaiting product-owner decision:
 1. Ask HYROX for a data licence or partnership: results lookup by name and the event calendar.
 2. Meanwhile, compliant fallbacks: (a) the athlete enters their own past result (finish time, optional run and station splits) with a link that opens the HYROX results site in their browser to look it up; (b) a race list we maintain ourselves (event name, city, dates, divisions offered), typed in by hand from public announcements and stored in our database, plus "my race isn't listed".
