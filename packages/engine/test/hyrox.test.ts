@@ -359,3 +359,19 @@ describe("variety", () => {
     expect(new Set(aDays.map(exercises)).size).toBeGreaterThan(1);
   });
 });
+
+// Product owner 2026-10-16: double days are never back to back and are spread through the week.
+describe("double days", () => {
+  for (const [level, over] of [["competitive", {}], ["advanced", { wantsDoubles: true }]] as const) {
+    it(`${level}: no two double days in a row, including Sunday → Monday`, () => {
+      const p = plan(athlete(level, over));
+      const counts = new Map<string, number>();
+      for (const w of all(p)) counts.set(w.date, (counts.get(w.date) ?? 0) + 1);
+      const doubles = [...counts].filter(([, n]) => n >= 2).map(([d]) => d).sort();
+      expect(doubles.length).toBeGreaterThan(0);
+      for (let i = 1; i < doubles.length; i++) {
+        expect(daysBetween(doubles[i - 1]!, doubles[i]!), `${doubles[i - 1]} and ${doubles[i]}`).toBeGreaterThanOrEqual(2);
+      }
+    });
+  }
+});

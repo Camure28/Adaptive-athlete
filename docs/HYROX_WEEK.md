@@ -24,6 +24,7 @@ Status: approved by product owner 2026-10-15.
 ## Rules (approved)
 - No back-to-back hard days.
 - **Double days** (two sessions in one day): Competitive by default. Advanced athletes are asked during onboarding whether they want them; off unless they opt in. When a hard morning and hard afternoon share a day, the next day is easy.
+- Double days are never back to back (including Sunday into Monday) and are spread through the week (PO, 2026-10-16).
 - Phases: base (aerobic + strength) → build (compromised + threshold) → peak (simulations + race pace) → taper.
 - Strength and station days count toward the weekly hard-day limit, not just runs.
 

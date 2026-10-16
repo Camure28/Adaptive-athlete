@@ -127,7 +127,7 @@ export function generateHyroxPlan(
   // ---- Weeks --------------------------------------------------------------------------------
   const weeks: PlanWeek[] = [];
   let stationCursor = 0;
-  let prevSunday = { hard: false, doubleHard: false };
+  let prevSunday = { hard: false, doubleHard: false, double: false };
   for (let i = 0; i < totalWeeks; i++) {
     const phase = phases[i]!;
     const monday = addDays(firstMonday, i * 7);
@@ -147,7 +147,7 @@ export function generateHyroxPlan(
 
     const placed = placeWeek(kept, days, longDay, doubles, lvl.hardDays.max, raceWeek ? goal.date : null, dateOf, prevSunday);
     const sundayHard = placed.filter((p) => p.date === dateOf(6) && isHard(p.slot)).length;
-    prevSunday = { hard: sundayHard > 0, doubleHard: sundayHard >= 2 };
+    prevSunday = { hard: sundayHard > 0, doubleHard: sundayHard >= 2, double: placed.filter((p) => p.date === dateOf(6)).length >= 2 };
     const workouts: PlannedWorkout[] = [];
     const runVolume = volumes[i]!;
 
@@ -337,12 +337,22 @@ function placeWeek(
   maxHardDays: number,
   raceDate: IsoDate | null,
   dateOf: (d: Weekday) => IsoDate,
-  prevSunday: { hard: boolean; doubleHard: boolean },
+  prevSunday: { hard: boolean; doubleHard: boolean; double: boolean },
 ): Placed[] {
   const byDay = new Map<Weekday, Slot[]>();
   const put = (d: Weekday, s: Slot) => byDay.set(d, [...(byDay.get(d) ?? []), s]);
   const count = (d: Weekday) => (byDay.get(d) ?? []).length;
   const hardOn = (d: Weekday) => (byDay.get(d) ?? []).some(isHard);
+  // Double days (two sessions) are never back to back, including across the weekend, and are
+  // spread through the week: among the allowed days, pick the one farthest from other doubles.
+  const isDouble = (d: number): boolean => (d < 0 ? prevSunday.double : d > 6 ? false : count(d as Weekday) >= 2);
+  const canStack = (d: Weekday): boolean => count(d) === 1 && !isDouble(d - 1) && !isDouble(d + 1);
+  const sameKind = (d: Weekday, s: Slot): boolean => (byDay.get(d) ?? []).some((x) => x.kind === s.kind);
+  const gapToDouble = (d: Weekday): number => {
+    const doubles = ([0, 1, 2, 3, 4, 5, 6] as Weekday[]).filter((x) => isDouble(x));
+    return doubles.length ? Math.min(...doubles.map((x) => Math.abs(x - d))) : 7;
+  };
+  const spread = (options: Weekday[]): Weekday[] => [...options].sort((a, b) => gapToDouble(b) - gapToDouble(a) || a - b);
 
   const raceWd = raceDate ? weekdayIndex(raceDate, dateOf(0)) : null;
   const usable = days.filter((d) => raceWd === null || d < raceWd);
@@ -376,11 +386,13 @@ function placeWeek(
     // Never two of the same session in one day (e.g. two compromised runs); prefer pairing with
     // a running-only session so the day stays manageable.
     for (const s of hard.slice(chosen.length)) {
-      const options = usable.filter(
-        (d) => hardOn(d) && count(d) < 2 && !(byDay.get(d) ?? []).some((x) => isSim(x) || x.kind === s.kind),
-      );
+      const options = spread(usable.filter(
+        (d) => hardOn(d) && canStack(d) && !(byDay.get(d) ?? []).some((x) => isSim(x) || x.kind === s.kind),
+      ));
       const runOnly = (d: Weekday) => (byDay.get(d) ?? []).every((x) => x.kind === "threshold" || x.kind === "race_pace_intervals");
-      const stack = options.find(runOnly) ?? options[0];
+      // Spread first; among equally spread days prefer pairing with a running-only session.
+      const top = options.filter((d) => gapToDouble(d) === gapToDouble(options[0]!));
+      const stack = top.find(runOnly) ?? options[0];
       if (stack !== undefined) put(stack, s);
     }
   }
@@ -399,7 +411,7 @@ function placeWeek(
     const free = usable.filter((d) => count(d) === 0 && ok(d)).sort((a, b) => Number(beforeHard(a)) - Number(beforeHard(b)) || a - b);
     if (free.length > 0) put(free[0]!, s);
     else if (doubles) {
-      const stack = usable.find((d) => count(d) === 1 && ok(d) && hardOn(d) && !doubleHard(d) && !(byDay.get(d) ?? []).some(isSim));
+      const stack = spread(usable.filter((d) => canStack(d) && !sameKind(d, s) && ok(d) && hardOn(d) && !doubleHard(d) && !(byDay.get(d) ?? []).some(isSim)))[0];
       if (stack !== undefined) put(stack, s);
     }
   }
@@ -409,7 +421,7 @@ function placeWeek(
     const free = usable.filter((d) => count(d) === 0 && !(raceWd !== null && raceWd - d <= 1));
     if (free.length > 0) put(free[0]!, s);
     else if (doubles) {
-      const stack = usable.find((d) => count(d) === 1 && !(byDay.get(d) ?? []).some(isSim) && !(raceWd !== null && raceWd - d <= 1));
+      const stack = spread(usable.filter((d) => canStack(d) && !sameKind(d, s) && !(byDay.get(d) ?? []).some(isSim) && !(raceWd !== null && raceWd - d <= 1)))[0];
       if (stack !== undefined) put(stack, s);
     }
   }
