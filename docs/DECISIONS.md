@@ -62,11 +62,28 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Details:** `pnpm-workspace.yaml` pins four Expo peer packages to SDK 57; update them with the SDK.
 **Status:** Accepted (product owner chose the Xcode route 2026-10-15).
 
-## D-013 — Session variety (2026-10-16)
+## D-013 — Monetization: free assessment and first week, paid adaptation (2026-10-16)
+**Decision:** The free tier is the assessment (onboarding), the full plan outline (phases, weekly volume, simulation dates), week 1 in full detail, workout logging, and the week-1 review. The subscription unlocks adaptation: the adjusted sessions and every later week. In the week-1 review, free athletes see what the engine found and a summary of what would change; the adjusted sessions unlock when they subscribe.
+**Why:** A static plan can be copied (PDFs and cheap apps exist). A plan that responds to the athlete's own results can't be done by hand, so that is what athletes pay for. The first week proves the programming is credible; the week-1 review shows adaptation using the athlete's own data.
+**Rules:** Safety rules (pain, illness) are never paywalled — a free athlete who reports pain gets the safety changes and advice. The weekly review shows "no change, because…" so quiet weeks still show the engine working.
+**Open:** Prices (working figures ~$14.99/month or ~$99/year), a one-time race-block pass, and per-athlete gym licensing are to be tested during the gym pilot. The pilot itself is free. Payments tooling (e.g. RevenueCat) and an `entitlements` table are needed before launch, not now.
+**Status:** Accepted (direction set by product owner 2026-10-16). Pricing proposed, not decided.
+
+## D-014 — Adaptation rubric (2026-10-16)
+**Decision:** Plan changes follow an explicit, versioned rule set in `docs/ADAPTATION_ENGINE.md`: rule groups Safety → Fatigue → Adherence → Progression → Targets → Block, with data-quality gates, weekly caps, conflict rules and an athlete-facing weekly review.
+**Why:** The adaptation engine is the paid product (D-013). Rules must be conservative, explainable and editable by a coach, not decided ad hoc by code or an LLM.
+**Status:** Partly approved. Product owner approved on 2026-10-16: the RPE margin (target + 2) for all levels, P-1 alternating progression, P-4 25% station steps, the 7-day return after a pain report, and level changes in both directions (D-015). Remaining thresholds await review; the approval log is in `docs/ADAPTATION_ENGINE.md` §10. Existing adaptation code in `packages/engine` is to be reconciled with the rubric.
+
+## D-015 — Athletes can change level in both directions (2026-10-16)
+**Decision:** Athletes can move themselves down a level at any time, based on how they're feeling; it applies from the next training week and keeps the race date, division and current paces. The engine may *suggest* moving down when the athlete is struggling (repeated fatigue, missed sessions or missed targets) or moving up after 4+ weeks of evidence, but never changes level on its own. A declined move-down suggestion isn't repeated for 2 weeks unless a safety or fatigue rule fires. Moving back up after moving down needs the same 4 weeks of evidence, to avoid bouncing between levels.
+**Why:** How an athlete feels is real data the engine can't measure; letting them step down keeps them training instead of quitting, while the evidence requirement for moving up keeps the plan stable.
+**Status:** Accepted (product owner 2026-10-16). Rules B-2, B-4, B-5 in `docs/ADAPTATION_ENGINE.md`.
+
+## D-016 — Session variety (2026-10-16)
 **Decision:** No session is repeated within a week and key sessions rotate formats week to week (threshold, race pace, compromised runs, station work, long runs, strides on easy runs). Strength is split into Day A (legs & push) and Day B (hinge & pull); exercises rotate every 3 weeks so lifts stay long enough to progress. Formats listed in `docs/HYROX_WEEK.md`.
 **Why:** Product owner testing: the same workout appeared twice in a week and weeks repeated. Variety keeps athletes engaged and trains different qualities; rotating strength by 3-week block keeps progressive overload.
 **Status:** Requested by product owner; formats are Claude's defaults awaiting coach review.
 
-## D-014 — Typography and keyboard handling (2026-10-16)
+## D-017 — Typography and keyboard handling (2026-10-16)
 **Decision:** Barlow Condensed for titles and Barlow for text (Google Fonts, bundled with the app). Sessions show three distinct voices: title, the work (semibold, with a coloured bar), and the explanation (regular, quieter). Text fields scroll into view above the keyboard.
 **Status:** Requested by product owner; fonts and layout are Claude's choice, open to change in the design pass.

@@ -12,6 +12,7 @@ Several Claude sessions work on this project (claude.ai Project chats, Claude Co
 - **Start:** `git pull`, then read `docs/PROGRESS.md` (latest entries) and `docs/DECISIONS.md`.
 - **End:** add a dated entry at the top of `docs/PROGRESS.md` (where, done, open), record any decision in `DECISIONS.md`, update the Status section below if it changed, run the checks, commit and push.
 - If something in the repo contradicts what Cameron said in your session, ask him rather than silently overwriting it.
+- The claude.ai Project keeps copies of the docs under `claude/` (e.g. `claude/DECISIONS.md`) for chats that can't reach the repo. A session with access to both mirrors repo docs into the Project after pushing, and pulls Project-only changes into the repo first. Always read a doc right before writing it and merge; never write a whole file from an older copy. Decision numbers come from the latest DECISIONS.md, so read it before adding one.
 
 ## Layout
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
