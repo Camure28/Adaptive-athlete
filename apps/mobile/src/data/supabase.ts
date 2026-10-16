@@ -56,6 +56,12 @@ export class SupabaseBackend implements Backend {
     }));
   }
 
+  async exportMyData(): Promise<string> {
+    const { data, error } = await this.db.rpc("export_my_data");
+    if (error) throw new BackendError("Your data couldn't be exported. Check your connection and try again.");
+    return JSON.stringify(data, null, 2);
+  }
+
   async signOut() {
     await this.db.auth.signOut();
   }

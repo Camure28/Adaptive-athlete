@@ -35,6 +35,8 @@ export interface Backend {
   loadOnboarding(): Promise<OnboardingAnswers | null>;
   /** Races that haven't finished yet, soonest first. */
   listEvents(today: string): Promise<HyroxEvent[]>;
+  /** Everything stored about this athlete, as formatted JSON (data export, SECURITY.md). */
+  exportMyData(): Promise<string>;
 }
 
 export class BackendError extends Error {}

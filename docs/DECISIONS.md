@@ -106,3 +106,8 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Note:** HYROX's own brand is also black and yellow. Since we aren't affiliated, keep our name, logo and wording clearly our own, and don't use HYROX logos, to avoid looking official. Revisit if HYROX partnership talks go ahead.
 **Status:** Accepted (product owner 2026-10-16); exact colours and fonts are Claude's choices, open to change.
 
+## D-021 — Account menu and calendar view (2026-10-16)
+**Decision:** The plan screen keeps only the dashboard and the plan; everything else moves to an Account menu (top-right button): email, Edit my answers, current plan (Pilot · free), Export my data (shares everything we store, via the existing `export_my_data` function), and Sign out. Change subscription, Manage billing and Delete my account are listed but marked "Soon" and can't be tapped until they exist. The plan can be viewed as a list of weeks or as a month calendar (Monday first) with session marks (HYROX, hard run, easy run, strength); tapping a day shows its sessions.
+**Before launch:** Apple requires apps that let people create accounts to also let them delete their account in the app, so "Delete my account" must be built before App Store submission. Subscriptions (D-013) need in-app purchase set up; billing then lives in the athlete's App Store account.
+**Status:** Accepted (product owner 2026-10-16).
+

@@ -37,6 +37,9 @@ export class DemoBackend implements Backend {
   async listEvents(today: string) {
     return DEMO_EVENTS.filter((e) => e.endDate >= today);
   }
+  async exportMyData() {
+    return JSON.stringify({ exported_at: new Date().toISOString(), demo: true, answers: this.answers }, null, 2);
+  }
   async loadOnboarding() {
     return this.answers ? structuredClone(this.answers) : null;
   }

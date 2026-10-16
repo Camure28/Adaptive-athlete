@@ -7,8 +7,7 @@ import { router } from "expo-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { generateHyroxPlan, HyroxPlanError, type PlannedWorkout, type PlanWeek, type TrainingPlan, type WorkoutStep } from "@adaptive-athlete/engine";
-import { Button, Callout, Heading, Screen } from "@/components/ui";
-import { backend } from "@/data";
+import { Button, Callout, Heading, Screen, Wordmark } from "@/components/ui";
 import { dashboardStats } from "@/lib/dashboard";
 import { distance, minutes, paceRange, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
@@ -93,7 +92,7 @@ function Stat({ label, value, unit, sub, small = false }: { label: string; value
 }
 
 export default function PlanScreen() {
-  const { answers, setAccount } = useSession();
+  const { answers } = useSession();
   const today = localToday();
   const result = useMemo((): { plan: TrainingPlan } | { error: string } => {
     try {
@@ -104,6 +103,7 @@ export default function PlanScreen() {
     }
   }, [answers, today]);
   const [openWeek, setOpenWeek] = useState(0);
+  const [view, setView] = useState<"weeks" | "calendar">("weeks");
 
   if ("error" in result) {
     return (
@@ -117,26 +117,161 @@ export default function PlanScreen() {
   const { plan } = result;
 
   return (
-    <Screen
-      footer={
-        <View style={{ gap: space.xs }}>
-          <Button title="Edit my answers" onPress={() => router.push("/onboarding/race")} />
-          <Button kind="quiet" title="Sign out" onPress={async () => { await backend.signOut(); setAccount(null); router.replace("/sign-in"); }} />
-        </View>
-      }
-    >
+    <Screen>
+      <View style={nav.bar}>
+        <Wordmark />
+        <Pressable onPress={() => router.push("/account")} accessibilityRole="button" accessibilityLabel="Account menu" hitSlop={10} style={nav.menu}>
+          <View style={nav.lineLong} />
+          <View style={nav.lineShort} />
+          <View style={nav.lineLong} />
+        </Pressable>
+      </View>
       <Dashboard plan={plan} answers={answers} today={today} />
-      <Callout>This plan is built on your phone from your answers. Saving it, logging workouts and automatic adjustments come next.</Callout>
       {plan.basis.notes.map((n) => (
         <Callout key={n}>{n}</Callout>
       ))}
 
-      {plan.weeks.map((w) => (
-        <Week key={w.index} week={w} open={openWeek === w.index} onToggle={() => setOpenWeek(openWeek === w.index ? -1 : w.index)} units={answers.units} />
-      ))}
+      <View style={nav.toggle} accessibilityRole="tablist">
+        {(["weeks", "calendar"] as const).map((v) => (
+          <Pressable key={v} onPress={() => setView(v)} accessibilityRole="tab" accessibilityState={{ selected: view === v }} style={[nav.tab, view === v && nav.tabOn]}>
+            <Text style={[nav.tabText, view === v && { color: color.onAccent }]}>{v === "weeks" ? "WEEKS" : "CALENDAR"}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {view === "weeks"
+        ? plan.weeks.map((w) => (
+            <Week key={w.index} week={w} open={openWeek === w.index} onToggle={() => setOpenWeek(openWeek === w.index ? -1 : w.index)} units={answers.units} />
+          ))
+        : <Calendar plan={plan} today={today} units={answers.units} />}
+
+      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>Built on your phone from your answers. Saving, logging and automatic adjustments come next.</Text>
     </Screen>
   );
 }
+
+// ---- Calendar -----------------------------------------------------------------------------------
+
+const MONTH_NAME = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+const isoOf = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+/** Month grid, Monday first. Each day shows its sessions as marks; tap a day to see them. */
+function Calendar({ plan, today, units }: { plan: TrainingPlan; today: string; units: Units }) {
+  const all = useMemo(() => plan.weeks.flatMap((w) => w.workouts), [plan]);
+  const byDate = useMemo(() => {
+    const m = new Map<string, PlannedWorkout[]>();
+    for (const w of all) m.set(w.date, [...(m.get(w.date) ?? []), w]);
+    return m;
+  }, [all]);
+  const first = plan.weeks[0]!.startDate;
+  const last = plan.goal.date;
+  const months: { y: number; m: number }[] = [];
+  for (let y = Number(first.slice(0, 4)), m = Number(first.slice(5, 7)) - 1; isoOf(y, m, 1) <= last; m === 11 ? (y++, (m = 0)) : m++) months.push({ y, m });
+  const startIdx = Math.max(0, months.findIndex((x) => isoOf(x.y, x.m, 1) <= today && today.slice(0, 7) === isoOf(x.y, x.m, 1).slice(0, 7)));
+  const [mi, setMi] = useState(startIdx);
+  const [selected, setSelected] = useState<string>(all.find((w) => w.date >= today)?.date ?? first);
+  const { y, m } = months[mi]!;
+  const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7;
+  const cells: (string | null)[] = [...Array<null>(lead).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => isoOf(y, m, i + 1))];
+  while (cells.length % 7) cells.push(null);
+  const dayList = byDate.get(selected) ?? [];
+
+  return (
+    <View>
+      <View style={cal.head}>
+        <Pressable onPress={() => setMi(Math.max(0, mi - 1))} disabled={mi === 0} accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={10} style={[cal.arrow, mi === 0 && { opacity: 0.3 }]}>
+          <Text style={cal.arrowText}>‹</Text>
+        </Pressable>
+        <Text style={cal.month}>{MONTH_NAME[m]} {y}</Text>
+        <Pressable onPress={() => setMi(Math.min(months.length - 1, mi + 1))} disabled={mi === months.length - 1} accessibilityRole="button" accessibilityLabel="Next month" hitSlop={10} style={[cal.arrow, mi === months.length - 1 && { opacity: 0.3 }]}>
+          <Text style={cal.arrowText}>›</Text>
+        </Pressable>
+      </View>
+      <View style={cal.grid}>
+        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+          <Text key={i} style={cal.dow}>{d}</Text>
+        ))}
+        {cells.map((iso, i) => {
+          if (!iso) return <View key={i} style={cal.cell} />;
+          const ws = byDate.get(iso) ?? [];
+          const race = ws.some((w) => w.type === "race");
+          const inPlan = iso >= first && iso <= last;
+          return (
+            <Pressable
+              key={i}
+              onPress={() => setSelected(iso)}
+              accessibilityRole="button"
+              accessibilityLabel={`${iso}, ${ws.length ? ws.map((w) => w.title).join(", ") : "rest"}`}
+              style={[cal.cell, cal.day, !inPlan && { opacity: 0.35 }, iso === selected && cal.daySel, race && cal.dayRace]}
+            >
+              <Text style={[cal.num, iso === today && cal.today, race && { color: color.onAccent }]}>{Number(iso.slice(8))}</Text>
+              <View style={cal.marks}>
+                {ws.slice(0, 3).map((w) => (
+                  <View key={w.id} style={[cal.mark, markStyle(w)]} />
+                ))}
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={cal.legend}>
+        <Legend style={markStyle({ sport: "hyrox", type: "compromised_run" } as PlannedWorkout)} label="HYROX" />
+        <Legend style={markStyle({ sport: "run", type: "threshold" } as PlannedWorkout)} label="HARD RUN" />
+        <Legend style={markStyle({ sport: "run", type: "easy_run" } as PlannedWorkout)} label="EASY RUN" />
+        <Legend style={markStyle({ sport: "strength", type: "strength" } as PlannedWorkout)} label="STRENGTH" />
+      </View>
+
+      <Text style={[type.eyebrow, { marginTop: space.lg, marginBottom: space.xs }]}>{shortDate(selected)}</Text>
+      {dayList.length ? dayList.map((w) => <Session key={w.id} w={w} units={units} />) : <Text style={[type.small, { paddingVertical: space.md }]}>Rest day. Nothing planned.</Text>}
+    </View>
+  );
+}
+
+function markStyle(w: Pick<PlannedWorkout, "sport" | "type">) {
+  if (w.sport === "hyrox" || w.type === "race") return { backgroundColor: color.accent };
+  if (w.sport === "strength") return { borderWidth: 1.5, borderColor: color.accent, backgroundColor: "transparent" };
+  if (w.type === "easy_run" || w.type === "long_run" || w.type === "recovery_run") return { backgroundColor: color.muted };
+  return { backgroundColor: color.text };
+}
+
+function Legend({ style, label }: { style: object; label: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+      <View style={[cal.mark, style]} />
+      <Text style={[type.data, { fontSize: 10 }]}>{label}</Text>
+    </View>
+  );
+}
+
+const nav = StyleSheet.create({
+  bar: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  menu: { width: 40, height: 32, alignItems: "flex-end", justifyContent: "center", gap: 5 },
+  lineLong: { width: 24, height: 2, backgroundColor: color.text },
+  lineShort: { width: 16, height: 2, backgroundColor: color.accent },
+  toggle: { flexDirection: "row", borderWidth: 1, borderColor: color.line, borderRadius: radius.control, padding: 3, marginBottom: space.md, gap: 3 },
+  tab: { flex: 1, minHeight: 38, alignItems: "center", justifyContent: "center", borderRadius: 4 },
+  tabOn: { backgroundColor: color.accent },
+  tabText: { fontFamily: font.mono, fontSize: 12, letterSpacing: 1.6, color: color.muted },
+});
+
+const cal = StyleSheet.create({
+  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: space.sm },
+  arrow: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: color.line, borderRadius: radius.control },
+  arrowText: { fontFamily: font.title, fontSize: 24, color: color.text, marginTop: -2 },
+  month: { fontFamily: font.mono, fontSize: 14, letterSpacing: 2, color: color.text },
+  grid: { flexDirection: "row", flexWrap: "wrap" },
+  dow: { width: `${100 / 7}%`, textAlign: "center", fontFamily: font.mono, fontSize: 10, letterSpacing: 1, color: color.muted, paddingVertical: 6 },
+  cell: { width: `${100 / 7}%`, aspectRatio: 0.9, padding: 2 },
+  day: { borderRadius: 4, borderWidth: 1, borderColor: "transparent", alignItems: "center", justifyContent: "space-between", paddingVertical: 6 },
+  daySel: { borderColor: color.accent, backgroundColor: color.surface },
+  dayRace: { backgroundColor: color.accent },
+  num: { fontFamily: font.mono, fontSize: 13, color: color.text },
+  today: { color: color.accent, textDecorationLine: "underline" },
+  marks: { flexDirection: "row", gap: 3, minHeight: 7 },
+  mark: { width: 7, height: 7, borderRadius: 2 },
+  legend: { flexDirection: "row", flexWrap: "wrap", gap: space.md, marginTop: space.sm },
+});
 
 function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; onToggle: () => void; units: Units }) {
   const run = week.workouts.reduce((m, w) => m + (w.sport === "run" || w.sport === "hyrox" ? w.plannedDistanceMeters ?? 0 : 0), 0);
