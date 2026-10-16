@@ -4,7 +4,7 @@
  * after a log is saved, which runs adaptation on the server first; answering a question re-runs it.
  */
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Text, View } from "react-native";
 import { TechLoader } from "@/components/loader";
 import { Button, Callout, Heading, Pills, Screen } from "@/components/ui";
@@ -40,8 +40,12 @@ export default function ReviewScreen() {
     }
   }, [setReview, setPlanAndLogs]);
 
+  // Runs once per visit when opened after a log, whatever else re-renders the screen.
+  const ran = useRef(false);
   useEffect(() => {
-    if (run === "1") void adapt();
+    if (run !== "1" || ran.current) return;
+    ran.current = true;
+    void adapt();
   }, [run, adapt]);
 
   const answer = async (questionId: string, value: string) => {

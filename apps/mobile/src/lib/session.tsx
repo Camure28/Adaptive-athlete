@@ -1,5 +1,5 @@
 /** App-wide state: signed-in account and the onboarding answers being edited. */
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { CompletedWorkout } from "@adaptive-athlete/engine";
 import type { Account, SavedPlan, SavedReview } from "@/data";
 import { EMPTY_ANSWERS, type OnboardingAnswers } from "@/onboarding/model";
@@ -32,29 +32,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<Record<string, CompletedWorkout>>({});
   const [review, setReview] = useState<SavedReview | null>(null);
   const [recent, setRecent] = useState<CompletedWorkout[]>([]);
+  // Helpers keep the same identity across renders: screens list them in effect dependencies, and
+  // a new function on every state change re-ran those effects in a loop (the review screen called
+  // adapt-plan repeatedly).
+  const update = useCallback((patch: Partial<OnboardingAnswers>) => setAnswers((a) => ({ ...a, ...patch })), []);
+  const setPlanAndLogs = useCallback((p: SavedPlan | null, l: CompletedWorkout[]) => {
+    setPlan(p);
+    setLogs(Object.fromEntries(l.filter((x) => x.plannedWorkoutId).map((x) => [x.plannedWorkoutId!, x])));
+  }, []);
+  const putLog = useCallback((log: CompletedWorkout) => {
+    const id = log.plannedWorkoutId;
+    if (id) setLogs((m) => ({ ...m, [id]: log }));
+  }, []);
   const value = useMemo<SessionState>(
     () => ({
       account,
       setAccount,
       answers,
       setAnswers,
-      update: (patch) => setAnswers((a) => ({ ...a, ...patch })),
+      update,
       plan,
       logs,
-      setPlanAndLogs: (p, l) => {
-        setPlan(p);
-        setLogs(Object.fromEntries(l.filter((x) => x.plannedWorkoutId).map((x) => [x.plannedWorkoutId!, x])));
-      },
-      putLog: (log) => {
-        const id = log.plannedWorkoutId;
-        if (id) setLogs((m) => ({ ...m, [id]: log }));
-      },
+      setPlanAndLogs,
+      putLog,
       review,
       setReview,
       recent,
       setRecent,
     }),
-    [account, answers, plan, logs, review, recent],
+    [account, answers, plan, logs, review, recent, update, setPlanAndLogs, putLog],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
