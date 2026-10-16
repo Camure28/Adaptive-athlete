@@ -28,5 +28,6 @@ The app uses Supabase when `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_
 
 ## Status (2026-10-15)
 - Done: engine (running + HYROX), schema with tested isolation, onboarding and plan preview.
-- Not yet verified end to end: Supabase sign-up and saving, because no Supabase project exists yet (needs product-owner approval).
-- Next: create the Supabase project; save plans server-side; workout logging; adaptation in the app.
+- Supabase project created and schema applied (2026-10-15). The app is configured for it locally.
+- Not yet verified end to end: sign-up and saving against Supabase. The build environment can't reach Supabase, so this is tested by running the app on a phone.
+- Next: move the code to GitHub; run on a phone with Expo Go; save plans server-side; workout logging; adaptation in the app.
