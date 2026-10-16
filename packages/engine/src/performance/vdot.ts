@@ -73,6 +73,25 @@ export function trainingPaces(vdot: number): TrainingPaces {
   };
 }
 
+// ---- Plausibility --------------------------------------------------------------------------
+
+/**
+ * Average speeds no real result can have. World records average about 6.6 m/s over 5K and
+ * 5.8 m/s over the marathon; 0.9 m/s is slower than an easy walk. A time outside this range is
+ * almost always a typing slip, usually h:mm entered as mm:ss ("1:45" read as 1 min 45 s).
+ */
+export const MAX_RACE_SPEED_MPS = 6.7;
+export const MIN_RACE_SPEED_MPS = 0.9;
+
+/** Why a result can't be real, or null when it's plausible. */
+export function implausibleRaceTime(distanceMeters: number, seconds: number): "too_fast" | "too_slow" | null {
+  if (!(distanceMeters > 0) || !(seconds > 0)) return "too_fast";
+  const v = distanceMeters / seconds;
+  if (v > MAX_RACE_SPEED_MPS) return "too_fast";
+  if (v < MIN_RACE_SPEED_MPS) return "too_slow";
+  return null;
+}
+
 // ---- Confidence -----------------------------------------------------------------------------
 
 export interface RaceAssessment {
@@ -124,6 +143,13 @@ export function assessRace(race: RaceResult, today: IsoDate): RaceAssessment {
   if (c.notAllOut) {
     confidence *= 0.5;
     reasons.push("Not an all-out effort");
+  }
+
+  const impossible = implausibleRaceTime(race.distanceMeters, race.finishSeconds);
+  if (impossible) {
+    // Never set paces from a result that can't be real; the plan stays effort-based instead.
+    confidence = 0;
+    reasons.push(impossible === "too_fast" ? "Time is faster than the world record for this distance" : "Time is slower than walking pace");
   }
 
   return {

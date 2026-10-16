@@ -4,6 +4,7 @@
  * Spec: docs/ONBOARDING.md.
  */
 import {
+  implausibleRaceTime,
   LIMITATIONS,
   METERS_PER_MILE,
   presetFor,
@@ -128,6 +129,15 @@ export function toMeters(value: number, units: Units): number {
 
 // ---- Validation -------------------------------------------------------------------------------
 
+/** HYROX Singles finishes run from about 53 minutes (elite) to a few hours. */
+const HYROX_FASTEST = 50 * 60;
+const HYROX_SLOWEST = 5 * 3600;
+export function hyroxTimeProblem(seconds: number): string | null {
+  if (seconds < HYROX_FASTEST) return "That's faster than the HYROX world record. Include hours, like 1:32:10.";
+  if (seconds > HYROX_SLOWEST) return "That's longer than 5 hours. Check the time, like 1:32:10.";
+  return null;
+}
+
 export function validateStep(step: Step, a: OnboardingAnswers, today: string): Errors {
   const e: Errors = {};
   switch (step) {
@@ -136,13 +146,21 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
       if (!iso) e.raceDate = a.eventId ? "Pick which day you're racing." : "Enter the race date as MM/DD/YYYY.";
       else if (iso <= today) e.raceDate = "Pick a race date in the future.";
       if (!a.division) e.division = "Choose the division you're racing.";
-      if (a.goal === "time" && parseTime(a.targetTime) === null) e.targetTime = "Enter a target time like 1:25:00, or choose Just finish.";
+      if (a.goal === "time") {
+        const t = parseTime(a.targetTime);
+        if (t === null) e.targetTime = "Enter a target time like 1:25:00, or choose Just finish.";
+        else if (hyroxTimeProblem(t)) e.targetTime = hyroxTimeProblem(t)!;
+      }
       break;
     }
     case "experience":
       if (!a.level) e.level = "Choose the level that fits you best.";
       if (!a.trainingStatus) e.trainingStatus = "Choose where your training is right now.";
-      if (a.pastHyroxTime && parseTime(a.pastHyroxTime) === null) e.pastHyroxTime = "Enter your time like 1:32:10.";
+      if (a.pastHyroxTime) {
+        const t = parseTime(a.pastHyroxTime);
+        if (t === null) e.pastHyroxTime = "Enter your time like 1:32:10.";
+        else if (hyroxTimeProblem(t)) e.pastHyroxTime = hyroxTimeProblem(t)!;
+      }
       if (a.pastHyroxTime && !parseUsDate(a.pastHyroxDate)) e.pastHyroxDate = "Add the race date as MM/DD/YYYY.";
       if ([...a.pastRunSplits, ...Object.values(a.pastStationSplits)].some((x) => x && x.trim() !== "" && parseTime(x) === null)) {
         e.pastSplits = "Enter splits like 4:35, or leave them blank.";
@@ -154,7 +172,13 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
         e.weeklyRun = `Enter how many ${a.units === "mi" ? "miles" : "kilometers"} you run in a typical week (0 is fine).`;
       }
       if (a.benchmarkDistance) {
-        if (parseTime(a.benchmarkTime) === null) e.benchmarkTime = "Enter your finish time like 24:30.";
+        const secs = parseTime(a.benchmarkTime);
+        if (secs === null) e.benchmarkTime = "Enter your finish time like 24:30.";
+        else {
+          const off = implausibleRaceTime(BENCHMARK_METERS[a.benchmarkDistance], secs);
+          if (off === "too_fast") e.benchmarkTime = "That's faster than the world record for this distance. For times over an hour, include hours, like 1:45:00.";
+          if (off === "too_slow") e.benchmarkTime = "That time looks too slow for this distance. Check it's hours:minutes:seconds, like 1:45:00.";
+        }
         const iso = parseUsDate(a.benchmarkDate);
         if (!iso) e.benchmarkDate = "Add the date as MM/DD/YYYY.";
         else if (iso > today) e.benchmarkDate = "That date is in the future.";

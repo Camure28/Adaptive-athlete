@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessRace, currentVdot, predictRaceSeconds, trainingPaces, vdotFromPerformance } from "../src/performance/vdot.js";
+import { assessRace, currentVdot, implausibleRaceTime, predictRaceSeconds, trainingPaces, vdotFromPerformance } from "../src/performance/vdot.js";
 import type { RaceResult } from "../src/types.js";
 
 // Reference values from the published Daniels VDOT tables (Daniels' Running Formula, 3rd ed.).
@@ -46,6 +46,16 @@ describe("race confidence", () => {
     expect(assessRace({ ...base, date: "2025-11-01" }, "2026-10-15").confidence).toBeLessThan(0.4);
     expect(assessRace({ ...base, conditions: { trail: true } }, "2026-10-15").confidence).toBe(0.5);
     expect(assessRace({ ...base, conditions: { notAllOut: true, trail: true } }, "2026-10-15").confidence).toBe(0.25);
+  });
+  it("never trusts an impossible time (h:mm typed as mm:ss)", () => {
+    // A half marathon entered as "1:30" is 90 seconds: faster than any human.
+    const typo = { ...base, distanceMeters: 21097.5, finishSeconds: 90 };
+    expect(implausibleRaceTime(typo.distanceMeters, typo.finishSeconds)).toBe("too_fast");
+    expect(assessRace(typo, "2026-10-15").confidence).toBe(0);
+    expect(currentVdot([typo], "2026-10-15")).toBeNull();
+    expect(implausibleRaceTime(5000, 10 * 3600)).toBe("too_slow");
+    expect(implausibleRaceTime(5000, 13 * 60)).toBeNull(); // world-class but real
+    expect(implausibleRaceTime(21097.5, 90 * 60)).toBeNull();
   });
   it("rejects future-dated races", () => {
     expect(() => assessRace({ ...base, date: "2026-12-01" }, "2026-10-15")).toThrow();

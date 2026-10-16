@@ -53,6 +53,11 @@ describe("validation", () => {
     expect(e.division).toBeTruthy();
     expect(e.targetTime).toMatch(/1:25:00/);
     expect(validateStep("schedule", { ...complete, days: [1, 4] }, TODAY).days).toMatch(/at least 3/);
+    // Impossible times are caught at entry (h:mm typed as mm:ss).
+    expect(validateStep("running", { ...complete, benchmarkDistance: "half_marathon", benchmarkTime: "1:45" }, TODAY).benchmarkTime).toMatch(/world record/);
+    expect(validateStep("running", { ...complete, benchmarkDistance: "half_marathon", benchmarkTime: "1:45:00" }, TODAY).benchmarkTime).toBeUndefined();
+    expect(validateStep("experience", { ...complete, pastHyroxTime: "1:32", pastHyroxDate: "09/01/2026" }, TODAY).pastHyroxTime).toMatch(/world record/);
+    expect(validateStep("race", { ...complete, goal: "time", targetTime: "1:25" }, TODAY).targetTime).toMatch(/world record/);
     expect(validateStep("equipment", { ...complete, equipment: ["rower"] }, TODAY).equipment).toMatch(/run/);
     expect(validateStep("review", { ...complete, consentHealthData: false }, TODAY).consentHealthData).toBeTruthy();
   });

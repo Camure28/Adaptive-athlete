@@ -6,6 +6,11 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (impossible benchmark times)
+- **Bug (found by Cameron on the phone):** race effort showed "0:13–0:13 /mi" and 112 mi of running in a week. Cause: a benchmark time that can't be real, almost certainly hours typed as minutes ("1:30" for a 1 h 30 min half marathon reads as 90 seconds). The engine trusted it, so paces and distances came out absurd.
+- **Fix:** the engine rejects any result faster than world-record speed or slower than walking pace (`implausibleRaceTime`); such a result gets 0 confidence, so the plan stays effort-based (RPE). Onboarding now catches these when they're entered, for the running benchmark, past HYROX time and target time ("include hours, like 1:45:00"). Tests in `performance.test.ts` and `model.test.ts`.
+- **Open (Cameron):** `pnpm functions:deploy` so the server builds plans with the fix. Then in the app go to Account, Edit my answers, re-enter the benchmark with hours, and save to get a corrected plan.
+
 ## 2026-10-16 — claude.ai Project chat (design pass)
 - **Done:** a calmer, rounded visual style (D-027). Look and styling only; no feature, data or engine changes. Outfit replaces the Barlow and JetBrains Mono fonts, and those font packages are removed. New tokens are in `lib/theme.ts`, including `kind` colours for session types. The shared components are restyled: pill buttons, a new `soft` button, borderless choices and fields, a smooth progress bar, and dot callouts. New `Ring` (progress ring drawn with plain views, so no native rebuild) and `Dot` components. The loader is a calm spinning arc. The plan dashboard, calendar, week and session rows, and account screen are restyled, and all loader copy is sentence case. Checked in the web preview (onboarding, plan, calendar, account, log). The ring was checked at 62% progress.
 - **Open (Cameron):** `git pull`, restart `npx expo start`, and look at it on the phone. A reload is enough, no rebuild needed. Coach feedback on the session dot colours is welcome.
