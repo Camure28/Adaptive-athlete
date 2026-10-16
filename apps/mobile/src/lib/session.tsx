@@ -1,7 +1,7 @@
 /** App-wide state: signed-in account and the onboarding answers being edited. */
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import type { CompletedWorkout } from "@adaptive-athlete/engine";
-import type { Account, SavedPlan } from "@/data";
+import type { Account, SavedPlan, SavedReview } from "@/data";
 import { EMPTY_ANSWERS, type OnboardingAnswers } from "@/onboarding/model";
 
 interface SessionState {
@@ -15,6 +15,9 @@ interface SessionState {
   logs: Record<string, CompletedWorkout>;
   setPlanAndLogs: (plan: SavedPlan | null, logs: CompletedWorkout[]) => void;
   putLog: (log: CompletedWorkout) => void;
+  /** The latest adaptation review (D-026). */
+  review: SavedReview | null;
+  setReview: (r: SavedReview | null) => void;
 }
 
 const Ctx = createContext<SessionState | null>(null);
@@ -24,6 +27,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswers] = useState<OnboardingAnswers>(EMPTY_ANSWERS);
   const [plan, setPlan] = useState<SavedPlan | null>(null);
   const [logs, setLogs] = useState<Record<string, CompletedWorkout>>({});
+  const [review, setReview] = useState<SavedReview | null>(null);
   const value = useMemo<SessionState>(
     () => ({
       account,
@@ -41,8 +45,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const id = log.plannedWorkoutId;
         if (id) setLogs((m) => ({ ...m, [id]: log }));
       },
+      review,
+      setReview,
     }),
-    [account, answers, plan, logs],
+    [account, answers, plan, logs, review],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

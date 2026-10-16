@@ -13,9 +13,10 @@ Enforced by the database (row-level security), not just the app:
 ## Server-side plan generation (D-022)
 - Plans are built and saved by the `generate-plan` Edge Function. It checks the caller's access token with Supabase Auth, reads their answers *with that token* (so row-level security still applies), and ignores everything in the request except the athlete's local date (accepted only within a day of the server's).
 - It saves through `record_plan_version`, which only the service role can execute. The function checks that the goal belongs to the athlete and that new sessions don't start before the version's start date. Athletes and signed-out visitors can't call it (tested).
-- The secret key it uses is injected by Supabase into Edge Functions (`SUPABASE_SECRET_KEYS`). It is never in the app, the repo or chat.
+- `adapt-plan` (D-026) works the same way: it reads with the caller's token and saves through `record_adaptation`, which only the service role can execute, checks the plan belongs to the athlete, and rejects a run based on an outdated version. Athletes write only their own answers (append-only); reviews and decisions are server-written.
+- The secret key they use is injected by Supabase into Edge Functions (`SUPABASE_SECRET_KEYS`). It is never in the app, the repo or chat.
 
-Proof: `supabase/tests/rls_test.sql` (66 checks), run with `pnpm db:test`. The suite was verified to fail when a rule is deliberately broken.
+Proof: `supabase/tests/rls_test.sql` (84 checks), run with `pnpm db:test`. The suite was verified to fail when a rule is deliberately broken.
 
 ## Privacy
 - Data minimisation: limitations are "movements to avoid", not diagnoses; division instead of sex.

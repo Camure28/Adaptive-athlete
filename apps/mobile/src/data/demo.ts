@@ -1,7 +1,17 @@
 /** Demo mode: in-memory only. Never used when a Supabase project is configured. */
-import { fromManualLog, generateHyroxPlan, HyroxPlanError, type CompletedWorkout, type ManualLog } from "@adaptive-athlete/engine";
+import {
+  adaptationInputFromRows,
+  adaptPlan,
+  fromManualLog,
+  generateHyroxPlan,
+  HyroxPlanError,
+  reviewForStorage,
+  toLogRow,
+  type CompletedWorkout,
+  type ManualLog,
+} from "@adaptive-athlete/engine";
 import { toEngineInputs, type OnboardingAnswers } from "@/onboarding/model";
-import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan } from "./backend";
+import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan, type SavedReview } from "./backend";
 
 /** Demo-mode sample races only; the real list lives in the database. */
 const DEMO_EVENTS: HyroxEvent[] = [
@@ -16,6 +26,8 @@ export class DemoBackend implements Backend {
   private answers: OnboardingAnswers | null = null;
   private plan: SavedPlan | null = null;
   private logs = new Map<string, CompletedWorkout>();
+  private replies: { question_id: string; value: string; answered_on: string }[] = [];
+  private review: SavedReview | null = null;
 
   async currentAccount() {
     return this.account;
@@ -34,6 +46,8 @@ export class DemoBackend implements Backend {
     this.answers = null;
     this.plan = null;
     this.logs.clear();
+    this.replies = [];
+    this.review = null;
   }
   async saveOnboarding(answers: OnboardingAnswers) {
     if (!this.account) throw new BackendError("Sign in to save your answers.");
@@ -62,6 +76,24 @@ export class DemoBackend implements Backend {
     const saved = fromManualLog(log, existingId ?? `demo-log-${this.logs.size + 1}`);
     this.logs.set(saved.id, saved);
     return saved;
+  }
+  /** Demo: the same engine and row mapping as the server, run on the phone and kept in memory. */
+  async adaptPlan(today: string) {
+    if (!this.plan) throw new BackendError("Build your plan first.");
+    const logs = [...this.logs.values()].map((c) => ({ ...toLogRow(c, "demo"), id: c.id }));
+    const input = adaptationInputFromRows(this.plan.plan, today, { logs, answers: this.replies, recovery: [], runResults: [] });
+    const result = adaptPlan(input, { now: new Date().toISOString() });
+    if (result.changed) this.plan = { plan: result.plan, version: result.plan.version, savedAt: result.plan.createdAt };
+    this.review = { review: reviewForStorage(result.review, input.answers, today), createdAt: new Date().toISOString(), toVersion: result.changed ? result.plan.version : null };
+    return this.review;
+  }
+  async latestReview() {
+    return this.review;
+  }
+  async answerQuestion(questionId: string, value: string, today: string) {
+    const log = questionId.startsWith("Q-1.") ? this.logs.get(questionId.slice(4)) : undefined;
+    if (log) this.logs.set(log.id, { ...log, rpe: Number(value) });
+    this.replies.push({ question_id: questionId, value, answered_on: today });
   }
   async listEvents(today: string) {
     return DEMO_EVENTS.filter((e) => e.endDate >= today);

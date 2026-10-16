@@ -418,3 +418,7 @@ enabled = true
 # the project's newer signing keys; the gateway's legacy JWT check is turned off for it.
 [functions.generate-plan]
 verify_jwt = false
+
+# adapt-plan checks the caller's access token itself, like generate-plan.
+[functions.adapt-plan]
+verify_jwt = false

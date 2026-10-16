@@ -48,7 +48,8 @@ export default function LogScreen() {
     setSaveError(null);
     try {
       putLog(await backend.saveLog(result.log, existing?.id ?? null));
-      router.back();
+      // Adapt the plan to this log and show what changed (D-026).
+      router.replace({ pathname: "/review", params: { run: "1" } });
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Your log couldn't be saved. Try again.");
     } finally {

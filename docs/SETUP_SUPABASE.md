@@ -33,9 +33,9 @@ npx supabase migration list       # local and live columns should match
 **History:** migrations `20261015000001` to `20261016000005` were applied by hand in the SQL Editor (the last two via the combined `supabase_update_oct16.sql`). On 2026-10-16 we checked each was present in the live database (tables, columns, functions, grants, 37 race rows) and marked them applied with `migration repair`.
 
 ## 2c. Edge Functions
-`generate-plan` builds and saves plans on the server (D-022). Deploy it from the repo after `git pull` whenever `supabase/functions/` or `packages/engine/` changed:
+`generate-plan` builds and saves plans (D-022); `adapt-plan` adapts them after each log (D-026). Deploy both from the repo after `git pull` whenever `supabase/functions/` or `packages/engine/` changed:
 ```bash
-pnpm functions:deploy     # bundles the engine, then deploys generate-plan (no Docker needed)
+pnpm functions:deploy     # bundles the engine, then deploys generate-plan and adapt-plan (no Docker needed)
 ```
 It needs no secrets from us: Supabase provides the project URL and keys to Edge Functions. Check it in the dashboard under Edge Functions → generate-plan → Logs. Free plan: 500,000 calls a month.
 

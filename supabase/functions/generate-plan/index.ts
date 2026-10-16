@@ -1,49 +1,19 @@
 // generate-plan (D-022): builds the signed-in athlete's HYROX plan from their SAVED answers and
 // stores it as a new immutable plan version. The app calls this after onboarding is saved.
 //
-// - Who: the caller's access token is checked with Supabase Auth; their rows are read with that
-//   token, so row-level security limits it to their own data.
+// - Who: the caller is checked and their rows are read with their own token (../_shared/request.ts).
 // - What: the request carries only the athlete's local date. Answers are never taken from the
 //   request, so a stored plan always matches the stored answers.
-// - Writing: through record_plan_version with the project's secret key (provided to Edge
-//   Functions by Supabase; never in the app or the repo). Athletes can't call that function.
+// - Writing: through record_plan_version with the secret key. Athletes can't call that function.
 //
 // The engine is bundled into ../_shared/engine.js by `pnpm functions:build` (git-ignored).
-import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 import { ENGINE_VERSION, generateHyroxPlan, HyroxPlanError, inputsFromProfile, planToRecord } from "../_shared/engine.js";
-
-const url = Deno.env.get("SUPABASE_URL")!;
-const publishableKey = keyFrom("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
-const secretKey = keyFrom("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
-
-function keyFrom(jsonName: string, legacyName: string): string {
-  const json = Deno.env.get(jsonName);
-  const key = json ? (JSON.parse(json) as Record<string, string>).default : Deno.env.get(legacyName);
-  if (!key) throw new Error(`Missing ${jsonName}`);
-  return key;
-}
-
-const reply = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+import { admin, caller, reply } from "../_shared/request.ts";
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return reply(405, { error: "Use POST." });
-
-  const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return reply(401, { error: "Sign in to build your plan." });
-  const asUser = createClient(url, publishableKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const { data: auth } = await asUser.auth.getUser(token);
-  if (!auth.user) return reply(401, { error: "Sign in to build your plan." });
-
-  // The athlete's own calendar date. Allowed within a day of the server's, for time zones.
-  const today = String(((await req.json().catch(() => ({}))) as { today?: unknown }).today ?? "");
-  const serverDay = Date.parse(new Date().toISOString().slice(0, 10));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(today) || Math.abs(Date.parse(today) - serverDay) > 86_400_000) {
-    return reply(400, { error: "Your phone's date looks wrong. Check it and try again." });
-  }
+  const who = await caller(req, "Sign in to build your plan.");
+  if (who instanceof Response) return who;
+  const { asUser, today } = who;
 
   const [athlete, profile, equipment, limits, goal, runs] = await Promise.all([
     asUser.from("athletes").select("id").maybeSingle(),
@@ -81,8 +51,7 @@ Deno.serve(async (req) => {
     throw e;
   }
 
-  const admin = createClient(url, secretKey, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data, error } = await admin.rpc("record_plan_version", {
+  const { data, error } = await admin().rpc("record_plan_version", {
     p_athlete_id: athlete.data.id,
     p_goal_id: goal.data.id,
     p_engine_version: ENGINE_VERSION,

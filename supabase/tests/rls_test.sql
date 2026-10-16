@@ -406,6 +406,117 @@ select pg_temp.expect(not exists (select 1 from public.completed_workouts where 
 commit;
 
 -- ---------------------------------------------------------------------------------------------
+-- Adaptation runs (D-026): server-only versions and decisions; athletes answer questions
+-- ---------------------------------------------------------------------------------------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+do $$ begin
+  perform public.record_adaptation('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 2, 'forged', '{}', '[]', '[]', '[]', '{}');
+  raise exception 'FAILED: athlete saved an adaptation';
+exception when insufficient_privilege then raise notice 'ok - athletes cannot save adaptations or decisions';
+end $$;
+insert into public.athlete_answers (athlete_id, question_id, value, answered_on)
+values ('a0000000-0000-0000-0000-00000000000a', 'A-2', 'yes', '2026-10-28');
+select pg_temp.expect((select count(*) from public.athlete_answers) = 1, 'A can answer the engine''s questions');
+do $$ begin
+  insert into public.athlete_answers (athlete_id, question_id, value, answered_on)
+  values ('b0000000-0000-0000-0000-00000000000b', 'A-2', 'no', '2026-10-28');
+  raise exception 'FAILED: A answered for B';
+exception when insufficient_privilege then raise notice 'ok - A cannot answer for another athlete';
+end $$;
+do $$ begin
+  update public.athlete_answers set value = 'no';
+  raise exception 'FAILED: answer edited';
+exception when insufficient_privilege then raise notice 'ok - answers are append-only (a new answer supersedes an old one)';
+end $$;
+do $$ begin
+  insert into public.plan_reviews (plan_id, athlete_id, from_version, review)
+  values ('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 2, '{}');
+  raise exception 'FAILED: athlete wrote a review';
+exception when insufficient_privilege then raise notice 'ok - athletes cannot write weekly reviews';
+end $$;
+commit;
+
+begin;
+set local role anon;
+do $$ begin
+  perform public.record_adaptation('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 2, 'forged', '{}', '[]', '[]', '[]', '{}');
+  raise exception 'FAILED: anon saved an adaptation';
+exception when insufficient_privilege then raise notice 'ok - signed-out visitors cannot save adaptations';
+end $$;
+commit;
+
+begin;
+set local role service_role;
+-- A run that changes nothing stores only its review.
+select pg_temp.expect(
+  public.record_adaptation('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 2, '0.1.0',
+    null, null, null, '[]', '{"kept": ["No change"]}')
+  @> '{"version": 2, "changed": false}'::jsonb,
+  'a run that changes nothing keeps the version');
+select pg_temp.expect((select count(*) from public.plan_reviews where to_version is null) = 1
+  and (select count(*) from public.adaptation_decisions where plan_id = 'a2000000-0000-0000-0000-00000000000a') = 0,
+  'it stores the review and no decisions');
+
+-- A run that changes the plan adds an 'adapted' version with its decisions.
+select pg_temp.expect(
+  public.record_adaptation('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 2, '0.1.0',
+    '{"notes": []}',
+    '[{"startDate": "2026-10-19", "phase": "base", "isRecoveryWeek": false, "targetRunMeters": 20000}]',
+    '[{"workout_key": "k1", "scheduled_date": "2026-10-20", "position": 0, "sport": "run", "session_type": "easy_run",
+       "title": "Easy run (adjusted)", "estimated_minutes": 40, "planned_meters": 6000, "planned_load": 120, "adapted_by_rule": "S-1", "body": {}}]',
+    '[{"rule_id": "S-1", "rule_version": 1, "action": "replace_easier", "outcome": "applied", "suppressed_reason": null, "confidence": 0.9,
+       "what_changed": "Eased", "why": "Pain", "next_steps": "Rest", "question": "Better?", "evidence": [], "changes": []},
+      {"rule_id": "P-1", "rule_version": 1, "action": "progress", "outcome": "suppressed", "suppressed_reason": "Safety first", "confidence": 0.7,
+       "what_changed": "-", "why": "-", "next_steps": "-", "question": null, "evidence": [], "changes": []}]',
+    '{"changed": [{"ruleId": "S-1"}]}')
+  @> '{"version": 3, "changed": true}'::jsonb,
+  'a run that changes the plan saves the next version');
+select pg_temp.expect(
+  (select reason = 'adapted' and inputs = (select inputs from public.plan_versions where plan_id = 'a2000000-0000-0000-0000-00000000000a' and version = 2)
+   from public.plan_versions where plan_id = 'a2000000-0000-0000-0000-00000000000a' and version = 3),
+  'the adapted version is marked adapted and keeps the engine inputs it came from');
+select pg_temp.expect((select current_version from public.training_plans where id = 'a2000000-0000-0000-0000-00000000000a') = 3,
+  'the plan points at the adapted version');
+select pg_temp.expect(
+  (select count(*) from public.adaptation_decisions where plan_id = 'a2000000-0000-0000-0000-00000000000a' and from_version = 2 and to_version = 3) = 2
+  and (select outcome from public.adaptation_decisions where rule_id = 'P-1' and plan_id = 'a2000000-0000-0000-0000-00000000000a') = 'suppressed',
+  'applied and suppressed decisions are recorded against the new version');
+select pg_temp.expect((select count(*) from public.planned_workouts pw join public.plan_versions v on v.id = pw.plan_version_id
+  where v.plan_id = 'a2000000-0000-0000-0000-00000000000a' and v.version = 2) = 2, 'the version it adapted is left exactly as it was');
+
+do $$ begin
+  perform public.record_adaptation('a2000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-00000000000a', 2, '0.1.0',
+    null, null, null, '[]', '{}');
+  raise exception 'FAILED: stale run saved';
+exception when serialization_failure then raise notice 'ok - a run based on an older version is rejected (it re-runs on the newer one)';
+end $$;
+do $$ begin
+  perform public.record_adaptation('a2000000-0000-0000-0000-00000000000a', 'b0000000-0000-0000-0000-00000000000b', 3, '0.1.0',
+    null, null, null, '[]', '{}');
+  raise exception 'FAILED: adaptation saved for the wrong athlete';
+exception when foreign_key_violation then raise notice 'ok - an adaptation can''t be saved against another athlete''s plan';
+end $$;
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+select pg_temp.expect((select count(*) from public.plan_reviews) = 2 and (select count(*) from public.adaptation_decisions) = 2,
+  'A can read their own reviews and decisions');
+select pg_temp.expect(jsonb_array_length(public.export_my_data() -> 'athlete_answers') = 1 and jsonb_array_length(public.export_my_data() -> 'plan_reviews') = 2,
+  'data export includes answers and reviews');
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
+select pg_temp.expect(not exists (select 1 from public.athlete_answers) and not exists (select 1 from public.plan_reviews),
+  'B cannot see A''s answers or reviews');
+commit;
+
+-- ---------------------------------------------------------------------------------------------
 -- Account deletion removes everything for that athlete and nothing else
 -- ---------------------------------------------------------------------------------------------
 delete from auth.users where id = 'bbbbbbbb-0000-0000-0000-000000000002';

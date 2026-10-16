@@ -17,7 +17,7 @@ Several Claude sessions work on this project (claude.ai Project chats, Claude Co
 ## Layout
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
 - `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
-- `supabase/`: migrations with row-level security; `pnpm db:test` runs the isolation tests on a local Postgres. `functions/generate-plan` builds and saves plans on the server (D-022) using the engine bundled by `pnpm functions:build`.
+- `supabase/`: migrations with row-level security; `pnpm db:test` runs the isolation tests on a local Postgres. `functions/generate-plan` builds and saves plans (D-022) and `functions/adapt-plan` adapts them after each log (D-026), using the engine bundled by `pnpm functions:build`; shared request code in `functions/_shared/request.ts`.
 - `docs/`: decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
 
 ## Commands
@@ -37,7 +37,7 @@ pnpm db:test                               # isolation tests on a local Postgres
 npx supabase db push --dry-run             # shows what would be applied; show Cameron first
 npx supabase db push                       # applies it, only after Cameron says go
 npx supabase migration list                # local vs live history
-pnpm functions:deploy                      # rebuild the engine bundle and deploy generate-plan; show Cameron first
+pnpm functions:deploy                      # rebuild the engine bundle, deploy generate-plan and adapt-plan; Cameron runs it (Claude Code blocks production deploys)
 ```
 - On this Mac, `pnpm db:test` needs a local Postgres 17 (`brew install postgresql@17`, not run as a service). Start a throwaway one on 127.0.0.1:54329 and pass `PSQL_CMD="/opt/homebrew/opt/postgresql@17/bin/psql -h 127.0.0.1 -p 54329 -U postgres"`.
 - Never edit a migration that has already been pushed; add a new one.
@@ -50,4 +50,5 @@ pnpm functions:deploy                      # rebuild the engine bundle and deplo
 - Supabase: email confirmation turned off for development; turn it back on before anyone else uses the app.
 - Verified 2026-10-16: sign-up and onboarding save to Supabase from the iPhone.
 - Verified 2026-10-16: first plan built and saved by the generate-plan Edge Function, shown on the iPhone (D-022).
-- Next: workout logging, adaptation in the app, UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).
+- Live 2026-10-16: workout logging (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
+- Next: log unplanned workouts, UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).

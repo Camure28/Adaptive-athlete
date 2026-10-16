@@ -49,6 +49,12 @@ export interface AdaptationResult {
 const NO_HARD_LEFT = "Would remove every hard session from a week, so we ask you first.";
 const REDUCING = new Set(["reduce_intensity", "reduce_volume", "replace_easier", "add_recovery"]);
 
+/** True when the session was adapted in an earlier run by a group that outranks `group`. */
+function adaptedByEarlierGroup(w: PlannedWorkout | undefined, group: RuleGroup): boolean {
+  if (!w?.adaptedBy) return false;
+  return GROUP_ORDER.indexOf(ruleGroup(w.adaptedBy)) < GROUP_ORDER.indexOf(group);
+}
+
 export function ruleGroup(ruleId: string): RuleGroup {
   const g = ruleId.split("-")[0] as RuleGroup;
   return GROUP_ORDER.includes(g) ? g : "P";
@@ -99,8 +105,15 @@ export function adaptPlan(
       continue;
     }
 
-    // 24-hour rule: only safety may change today's sessions.
-    const changes = d.changes.filter((c) => !touched.has(c.workoutId) && (safety || (c.after?.date ?? c.before?.date ?? "") > input.today));
+    // 24-hour rule: only safety may change today's sessions. A session already adapted by an
+    // earlier (more conservative) group in a previous run keeps that change: the conflict rule
+    // (§3) holds across runs, so re-running on an adapted plan never stacks a second change.
+    const changes = d.changes.filter(
+      (c) =>
+        !touched.has(c.workoutId) &&
+        (safety || (c.after?.date ?? c.before?.date ?? "") > input.today) &&
+        (safety || !adaptedByEarlierGroup(original.get(c.workoutId), group)),
+    );
     if (d.changes.length > 0 && changes.length === 0 && !d.targetUpdate) {
       suppressed.push({ decision: d, reason: "The sessions it would change were already changed by an earlier rule, or are today." });
       continue;

@@ -4,7 +4,7 @@
  * - DemoBackend: in-memory, nothing leaves the device or survives a reload. Used only when no
  *   Supabase project is configured; the UI shows a permanent "Demo mode" banner.
  */
-import type { CompletedWorkout, ManualLog, TrainingPlan } from "@adaptive-athlete/engine";
+import type { CompletedWorkout, ManualLog, StoredReview, TrainingPlan } from "@adaptive-athlete/engine";
 import type { OnboardingAnswers } from "@/onboarding/model";
 
 export interface Account {
@@ -32,6 +32,14 @@ export interface SavedPlan {
   savedAt: string; // ISO instant
 }
 
+/** What one adaptation run concluded (D-026). */
+export interface SavedReview {
+  review: StoredReview;
+  createdAt: string; // ISO instant
+  /** The plan version this run created, or null when nothing changed. */
+  toVersion: number | null;
+}
+
 export interface Backend {
   readonly mode: "supabase" | "demo";
   currentAccount(): Promise<Account | null>;
@@ -52,6 +60,15 @@ export interface Backend {
   listLogs(planId: string): Promise<CompletedWorkout[]>;
   /** Saves a manual log (D-025); pass the existing log's id to edit it. Returns what was stored. */
   saveLog(log: ManualLog, existingId: string | null): Promise<CompletedWorkout>;
+  /**
+   * Runs adaptation on the current plan and returns the review. Supabase: the adapt-plan Edge
+   * Function does this on the server, from stored data only.
+   */
+  adaptPlan(today: string): Promise<SavedReview>;
+  /** The most recent review, or null if adaptation hasn't run yet. */
+  latestReview(): Promise<SavedReview | null>;
+  /** Answers one of the engine's questions. Q-1 (missing effort) also writes the RPE into that log. */
+  answerQuestion(questionId: string, value: string, today: string): Promise<void>;
   /** Races that haven't finished yet, soonest first. */
   listEvents(today: string): Promise<HyroxEvent[]>;
   /** Everything stored about this athlete, as formatted JSON (data export, SECURITY.md). */

@@ -95,7 +95,7 @@ function Stat({ label, value, unit, sub, small = false }: { label: string; value
 }
 
 export default function PlanScreen() {
-  const { answers, account, logs, setPlanAndLogs } = useSession();
+  const { answers, account, logs, setPlanAndLogs, plan: current, review, setReview } = useSession();
   const { dismissed, dismiss } = useDismissedNotes(account?.userId);
   const today = localToday();
   const [result, setResult] = useState<SavedPlan | { error: string } | null>(null);
@@ -119,9 +119,10 @@ export default function PlanScreen() {
           if (live) setResult({ error: "Your plan couldn't be loaded. Try again in a moment." });
           return;
         }
-        const logged = await backend.listLogs(saved.plan.id);
+        const [logged, latest] = await Promise.all([backend.listLogs(saved.plan.id), backend.latestReview()]);
         if (!live) return;
         setPlanAndLogs(saved, logged);
+        setReview(latest);
         setResult(saved);
       } catch (e) {
         if (live) setResult({ error: e instanceof Error ? e.message : "Your plan couldn't be loaded. Try again in a moment." });
@@ -130,7 +131,7 @@ export default function PlanScreen() {
     return () => {
       live = false;
     };
-  }, [today, attempt, setPlanAndLogs]);
+  }, [today, attempt, setPlanAndLogs, setReview]);
 
   if (!result) return <TechLoader lines={["LOADING YOUR PLAN", "GENERATING TRAINING PLAN"]} stage={stage} />;
 
@@ -150,7 +151,10 @@ export default function PlanScreen() {
     );
   }
 
-  const { plan } = result;
+  // The shared copy updates when adaptation saves a new version (review screen).
+  const saved = current ?? result;
+  const { plan } = saved;
+  const questions = review?.review.questions.length ?? 0;
 
   return (
     <Screen>
@@ -163,6 +167,15 @@ export default function PlanScreen() {
         </Pressable>
       </View>
       <Dashboard plan={plan} answers={answers} today={today} />
+      {review ? (
+        <View style={{ marginBottom: space.md }}>
+          <Button
+            kind={questions > 0 ? "primary" : "quiet"}
+            title={questions > 0 ? `Your review · ${questions} ${questions === 1 ? "question" : "questions"}` : "Your latest review"}
+            onPress={() => router.push("/review")}
+          />
+        </View>
+      ) : null}
       {dismissed
         ? plan.basis.notes.filter((n) => !dismissed.has(n)).map((n) => (
             <Callout key={n} onDismiss={() => dismiss(n)}>{n}</Callout>
@@ -183,7 +196,7 @@ export default function PlanScreen() {
           ))
         : <Calendar plan={plan} today={today} units={answers.units} logs={logs} />}
 
-      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>{backend.mode === "demo" ? "Demo mode: built on your phone, not saved." : `Plan version ${result.version} · saved ${shortDate(localToday(new Date(result.savedAt)))}. Logging and automatic adjustments come next.`}</Text>
+      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>{backend.mode === "demo" ? "Demo mode: built on your phone, not saved." : `Plan version ${saved.version} · saved ${shortDate(localToday(new Date(saved.savedAt)))}. Log sessions and your plan adapts to them.`}</Text>
     </Screen>
   );
 }

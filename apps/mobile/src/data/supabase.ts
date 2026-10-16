@@ -7,8 +7,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EMPTY_ANSWERS, toSavePayload, type Division, type OnboardingAnswers } from "@/onboarding/model";
-import { fromLogRow, fromManualLog, planFromRecord, toLogRow, type CompletedWorkout, type Equipment, type GymType, type HyroxGoal, type HyroxLevel, type Limitation, type LogRow, type ManualLog, type TrainingStatus, type WeekRecord, type Weekday, type WorkoutRow } from "@adaptive-athlete/engine";
-import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan } from "./backend";
+import { fromLogRow, fromManualLog, planFromRecord, toLogRow, type CompletedWorkout, type Equipment, type GymType, type HyroxGoal, type HyroxLevel, type Limitation, type LogRow, type ManualLog, type StoredReview, type TrainingStatus, type WeekRecord, type Weekday, type WorkoutRow } from "@adaptive-athlete/engine";
+import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan, type SavedReview } from "./backend";
 
 export class SupabaseBackend implements Backend {
   readonly mode = "supabase" as const;
@@ -71,17 +71,48 @@ export class SupabaseBackend implements Backend {
     if (error) throw new BackendError("Your answers couldn't be saved. Check your connection and try again.");
   }
 
-  async buildPlan(today: string) {
-    const { error } = await this.db.functions.invoke("generate-plan", { body: { today } });
-    if (!error) return;
-    // The function explains failures it understands (e.g. "At least 3 training days…") as { error }.
-    let message = "Your plan couldn't be built. Check your connection and try again.";
+  /** Calls an Edge Function. They explain failures they understand (e.g. "At least 3 training days…") as { error }. */
+  private async invoke<T>(name: string, body: Record<string, unknown>, fallback: string): Promise<T> {
+    const { data, error } = await this.db.functions.invoke(name, { body });
+    if (!error) return data as T;
+    let message = fallback;
     const response = (error as { context?: unknown }).context;
     if (response instanceof Response) {
-      const body = (await response.json().catch(() => null)) as { error?: unknown } | null;
-      if (typeof body?.error === "string") message = body.error;
+      const reply = (await response.json().catch(() => null)) as { error?: unknown } | null;
+      if (typeof reply?.error === "string") message = reply.error;
     }
     throw new BackendError(message);
+  }
+
+  async buildPlan(today: string) {
+    await this.invoke("generate-plan", { today }, "Your plan couldn't be built. Check your connection and try again.");
+  }
+
+  async adaptPlan(today: string): Promise<SavedReview> {
+    const r = await this.invoke<{ version: number; changed: boolean; review: StoredReview }>(
+      "adapt-plan", { today }, "Your plan couldn't be updated. Check your connection and try again.",
+    );
+    return { review: r.review, createdAt: new Date().toISOString(), toVersion: r.changed ? r.version : null };
+  }
+
+  async latestReview(): Promise<SavedReview | null> {
+    const { data, error } = await this.db.from("plan_reviews").select("review, created_at, to_version").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (error) throw new BackendError("Your review couldn't be loaded. Check your connection and try again.");
+    return data ? { review: data.review as StoredReview, createdAt: data.created_at, toVersion: data.to_version } : null;
+  }
+
+  async answerQuestion(questionId: string, value: string, today: string) {
+    const failed = new BackendError("Your answer couldn't be saved. Check your connection and try again.");
+    const athlete = await this.db.from("athletes").select("id").single();
+    if (athlete.error) throw failed;
+    // Q-1 asks for a missing effort score: it belongs on that session's log, where the rules read it.
+    const logId = questionId.startsWith("Q-1.") ? questionId.slice(4) : null;
+    if (logId) {
+      const { error } = await this.db.from("completed_workouts").update({ rpe: Number(value) }).eq("id", logId);
+      if (error) throw failed;
+    }
+    const { error } = await this.db.from("athlete_answers").insert({ athlete_id: athlete.data.id, question_id: questionId, value, answered_on: today });
+    if (error) throw failed;
   }
 
   async loadPlan(): Promise<SavedPlan | null> {
