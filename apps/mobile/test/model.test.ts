@@ -10,6 +10,7 @@ import {
   suggestStatusFromPastRace,
   validateAll,
   validateStep,
+  readTime,
   type OnboardingAnswers,
 } from "../src/onboarding/model";
 
@@ -40,6 +41,14 @@ describe("parsing", () => {
     expect(parseTime("24:30")).toBe(1470);
     expect(parseTime("24:75")).toBeNull();
     expect(parseTime("fast")).toBeNull();
+  });
+});
+
+describe("time read-back", () => {
+  it("says how a typed time was read, so h:mm vs mm:ss slips are visible", () => {
+    expect(readTime(90)).toBe("1 min 30 s");
+    expect(readTime(5400)).toBe("1 h 30 min");
+    expect(readTime(5530)).toBe("1 h 32 min 10 s");
   });
 });
 

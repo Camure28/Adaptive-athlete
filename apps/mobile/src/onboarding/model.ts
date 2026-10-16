@@ -123,6 +123,12 @@ export function parseTime(text: string): number | null {
   return secs > 0 ? secs : null;
 }
 
+/** "1 h 32 min 10 s", how we read what was typed. */
+export function readTime(secs: number): string {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), sec = secs % 60;
+  return [h ? `${h} h` : "", m ? `${m} min` : "", sec ? `${sec} s` : ""].filter(Boolean).join(" ") || "0 s";
+}
+
 export function toMeters(value: number, units: Units): number {
   return Math.round(units === "mi" ? value * METERS_PER_MILE : value * 1000);
 }

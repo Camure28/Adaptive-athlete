@@ -1,7 +1,7 @@
 /** The seven onboarding screens (docs/ONBOARDING.md). Each renders questions only; navigation lives in the route. */
 import { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, Text, View } from "react-native";
-import { EQUIPMENT, STATION_NAMES, STATION_ORDER, addDays, type Equipment, type GymType, type HyroxLevel, type TrainingStatus, type Weekday } from "@adaptive-athlete/engine";
+import { EQUIPMENT, STATION_NAMES, STATION_ORDER, addDays, implausibleRaceTime, type Equipment, type GymType, type HyroxLevel, type TrainingStatus, type Weekday } from "@adaptive-athlete/engine";
 import { backend, type HyroxEvent } from "@/data";
 import { resultsProvider } from "@/data/results";
 import { Button, Callout, Choice, Field, Heading, Pills, Question, Stepper } from "@/components/ui";
@@ -9,7 +9,11 @@ import { localToday } from "@/lib/session";
 import { color, space, type } from "@/lib/theme";
 import {
   applyGymTypes,
+  BENCHMARK_METERS,
   doublesQuestionApplies,
+  hyroxTimeProblem,
+  parseTime,
+  readTime,
   LIMITATION_LABELS,
   LIMITATIONS,
   suggestStatusFromPastRace,
@@ -19,6 +23,28 @@ import {
   type OnboardingAnswers,
   type Step,
 } from "./model";
+
+/**
+ * A time entry that says back how it was read ("Reads as 1 h 32 min"), so a 1:30 meant as an hour
+ * and a half is caught while typing. `check` flags times that can't be right for this field.
+ */
+function TimeField({ label, value, onChange, placeholder, check }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; check?: (secs: number) => string | null }) {
+  const secs = value.trim() ? parseTime(value) : null;
+  const problem = secs !== null && check ? check(secs) : null;
+  return (
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text style={[type.small, { marginBottom: 4 }]}>{label}</Text>
+      <Field value={value} onChangeText={onChange} placeholder={placeholder} keyboardType="numbers-and-punctuation" invalid={!!problem} accessibilityLabel={label} />
+      {value.trim() ? (
+        <Text style={[type.data, { marginTop: 4 }, problem ? { color: color.safety } : null]} accessibilityLiveRegion="polite">
+          {secs === null ? "Use colons, like 1:32:10" : problem ?? `Reads as ${readTime(secs)}`}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+const BENCH_PLACEHOLDER: Record<BenchmarkDistance, string> = { "5k": "24:30", "10k": "52:00", half_marathon: "1:55:00" };
 
 export interface StepProps {
   a: OnboardingAnswers;
@@ -131,7 +157,7 @@ function Race({ a, update, errors }: StepProps) {
         <Choice label="A target time" selected={a.goal === "time"} onPress={() => update({ goal: "time" })} />
         {a.goal === "time" ? (
           <View style={{ marginTop: space.sm }}>
-            <Field value={a.targetTime} onChangeText={(targetTime) => update({ targetTime })} placeholder="1:25:00" keyboardType="numbers-and-punctuation" invalid={!!errors.targetTime} accessibilityLabel="Target finish time" />
+            <TimeField label="Target finish time (hours:minutes:seconds)" value={a.targetTime} onChange={(targetTime) => update({ targetTime })} placeholder="1:25:00" check={hyroxTimeProblem} />
             <Text style={[type.small, { marginTop: space.sm }]}>We'll record this now and use it for pacing once we can check it against your benchmarks.</Text>
           </View>
         ) : null}
@@ -179,12 +205,16 @@ function PastResult({ a, update, errors }: { a: OnboardingAnswers; update: StepP
   return (
     <Question label="Your best recent HYROX result (optional)" help={resultsProvider ? undefined : "Skip this if you don't have it to hand. Splits help us find your strongest and weakest stations."} error={errors.pastHyroxTime ?? errors.pastHyroxDate ?? errors.pastSplits}>
       <View style={{ flexDirection: "row", gap: space.sm }}>
-        <Field style={{ flex: 1 }} value={a.pastHyroxTime} onChangeText={(pastHyroxTime) => update({ pastHyroxTime })} placeholder="1:32:10" keyboardType="numbers-and-punctuation" accessibilityLabel="Past HYROX finish time" />
-        <Field style={{ flex: 1 }} value={a.pastHyroxDate} onChangeText={(pastHyroxDate) => update(suggestStatusFromPastRace(a, pastHyroxDate, localToday()))} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" accessibilityLabel="Past HYROX race date" />
+        <TimeField label="Finish time (h:mm:ss)" value={a.pastHyroxTime} onChange={(pastHyroxTime) => update({ pastHyroxTime })} placeholder="1:32:10" check={hyroxTimeProblem} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[type.small, { marginBottom: 4 }]}>Race date</Text>
+          <Field value={a.pastHyroxDate} onChangeText={(pastHyroxDate) => update(suggestStatusFromPastRace(a, pastHyroxDate, localToday()))} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" accessibilityLabel="Past HYROX race date" />
+        </View>
       </View>
       <Button kind="quiet" title="Look up my result on the HYROX results site" onPress={() => { Linking.openURL("https://results.hyrox.com").catch(() => undefined); }} />
       {showSplits ? (
         <View style={{ gap: space.md, marginTop: space.sm }}>
+          <Text style={type.small}>Minutes:seconds, like 4:35. Leave any you don't know blank.</Text>
           <Text style={type.eyebrow}>Runs (each 1 km)</Text>
           <View style={st.grid}>
             {a.pastRunSplits.map((v, i) => (
@@ -239,10 +269,26 @@ function Running({ a, update, errors }: StepProps) {
         ))}
       </Question>
       {a.benchmarkDistance ? (
-        <Question label="Time and date" error={errors.benchmarkTime ?? errors.benchmarkDate}>
+        <Question
+          label="Time and date"
+          help={a.benchmarkDistance === "half_marathon" ? "Hours:minutes:seconds, like 1:55:00." : "Minutes:seconds, like 24:30. Over an hour? Add hours, like 1:02:30."}
+          error={errors.benchmarkTime ?? errors.benchmarkDate}
+        >
           <View style={{ flexDirection: "row", gap: space.sm }}>
-            <Field style={{ flex: 1 }} value={a.benchmarkTime} onChangeText={(benchmarkTime) => update({ benchmarkTime })} placeholder="24:30" accessibilityLabel="Benchmark finish time" />
-            <Field style={{ flex: 1 }} value={a.benchmarkDate} onChangeText={(benchmarkDate) => update({ benchmarkDate })} placeholder="MM/DD/YYYY" accessibilityLabel="Benchmark date" />
+            <TimeField
+              label="Finish time"
+              value={a.benchmarkTime}
+              onChange={(benchmarkTime) => update({ benchmarkTime })}
+              placeholder={BENCH_PLACEHOLDER[a.benchmarkDistance]}
+              check={(secs) => {
+                const off = implausibleRaceTime(BENCHMARK_METERS[a.benchmarkDistance!], secs);
+                return off === "too_fast" ? "Faster than the world record. Add hours?" : off === "too_slow" ? "Too slow for this distance" : null;
+              }}
+            />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[type.small, { marginBottom: 4 }]}>Date</Text>
+              <Field value={a.benchmarkDate} onChangeText={(benchmarkDate) => update({ benchmarkDate })} placeholder="MM/DD/YYYY" keyboardType="numbers-and-punctuation" accessibilityLabel="Benchmark date" />
+            </View>
           </View>
         </Question>
       ) : null}

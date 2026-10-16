@@ -6,6 +6,14 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (time entry instructions)
+- **Done (Cameron's request):** every finish-time field in onboarding says how to type it and reads back what it understood. Covers the target time, past HYROX time, benchmark and splits.
+  - **Labels:** each field now has one, such as "Finish time (h:mm:ss)" next to "Race date".
+  - **Format help:** set per distance. The half marathon gets "Hours:minutes:seconds, like 1:55:00"; 5K and 10K get "Minutes:seconds, like 24:30. Over an hour? Add hours".
+  - **Example times:** set per distance.
+  - **Live read-back:** "Reads as 1 h 30 min". Impossible times show in red as you type ("Faster than the world record. Add hours?").
+  - **Code:** `TimeField` in `onboarding/steps.tsx` and `readTime` in `model.ts`, tested. App only: a reload is enough.
+
 ## 2026-10-16 — claude.ai Project chat (impossible benchmark times)
 - **Bug (found by Cameron on the phone):** race effort showed "0:13–0:13 /mi" and 112 mi of running in a week. Cause: a benchmark time that can't be real, almost certainly hours typed as minutes ("1:30" for a 1 h 30 min half marathon reads as 90 seconds). The engine trusted it, so paces and distances came out absurd.
 - **Fix:** the engine rejects any result faster than world-record speed or slower than walking pace (`implausibleRaceTime`); such a result gets 0 confidence, so the plan stays effort-based (RPE). Onboarding now catches these when they're entered, for the running benchmark, past HYROX time and target time ("include hours, like 1:45:00"). Tests in `performance.test.ts` and `model.test.ts`.
