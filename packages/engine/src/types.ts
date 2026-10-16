@@ -321,11 +321,43 @@ export interface CompletedWorkout {
   splits?: CompletedSplit[];
   /** Session RPE (CR-10), reported ~30 min after. */
   rpe?: number;
-  /** 0 = none … 10 = worst. Any pain report is a safety signal, not a diagnosis. */
-  pain?: { level: number; location?: string; alteredMovement?: boolean };
+  /** Pain 0 = none … 10 = worst. Any pain report is a safety signal, not a diagnosis. */
+  pain?: PainReport;
+  /** 1 = fresh … 5 = very sore (D-024: 1–5 taps). */
   soreness?: number;
+  /** 1 = fresh … 5 = very fatigued (D-024: 1–5 taps). */
   fatigue?: number;
   notes?: string;
+}
+
+/** Body areas for pain reports: where it hurts, never what it is (no diagnoses). */
+export type BodyArea = "knee" | "lower_back_hip" | "shoulder_arm" | "foot_ankle_lower_leg" | "other";
+
+export interface PainReport {
+  level: number;
+  /** Chosen area; when absent, the engine reads `location` for common words (knee, shin, back…). */
+  area?: BodyArea;
+  location?: string;
+  alteredMovement?: boolean;
+  /** Athlete described it as sharp. */
+  sharp?: boolean;
+  /** The pain made them stop the session. */
+  stoppedSession?: boolean;
+}
+
+/** A quick check-in outside a workout log: "not feeling 100%", or a pain update. */
+export interface CheckIn {
+  date: IsoDate;
+  notFeeling100?: boolean;
+  /** Pain update after a report: true = better than at the report. */
+  painImproved?: boolean;
+}
+
+/** The athlete's answer to an engine question (AdaptationDecision.questionId). */
+export interface AthleteAnswer {
+  questionId: string;
+  date: IsoDate;
+  value: string;
 }
 
 export interface DailyRecovery {
@@ -384,4 +416,8 @@ export interface AdaptationDecision {
   targetUpdate?: { vdot: number };
   /** When set, the engine needs athlete input before acting. */
   question?: string;
+  /** Stable id for the question, so the app can return the answer (AthleteAnswer.questionId). */
+  questionId?: string;
+  /** Blocks progression: for every session type ("all") or the listed ones. */
+  holdsProgression?: "all" | SessionType[];
 }

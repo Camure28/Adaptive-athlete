@@ -10,7 +10,7 @@
  * exercise lists and rep schemes below are Claude's defaults awaiting coach review.
  */
 import type { Phase } from "../types.js";
-import { isAvoided, resolveStation, type Equipment, type Limitation } from "./equipment.js";
+import { isAvoided, optionAvoidedByName, resolveStation, type Equipment, type Limitation } from "./equipment.js";
 
 export type StrengthDay = "A" | "B";
 
@@ -100,4 +100,13 @@ export function strengthItems(input: StrengthInput): StrengthItem[] {
     add(pick(CORE_B.map((x) => x.name)), CORE[input.phase]);
   }
   return items;
+}
+
+const ALL_EXERCISES: readonly Exercise[] = [...SINGLE_LEG, ...PUSH, ...CORE_A, ...HINGE, ...HINGE_SAFE, ...ROW_EXTRA, ...CORE_B];
+
+/** True when a strength item (by name) involves an avoided movement: own exercises or station-support options. */
+export function strengthItemAvoided(name: string, avoid: readonly string[]): boolean {
+  const own = ALL_EXERCISES.find((x) => x.name === name);
+  if (own) return (own.avoidIf ?? []).some((a) => avoid.includes(a));
+  return optionAvoidedByName(name, avoid);
 }

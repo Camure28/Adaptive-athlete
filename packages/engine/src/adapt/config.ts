@@ -1,76 +1,101 @@
-/** Adaptation thresholds. Reviewable coaching parameters; see docs/ADAPTATION_ENGINE.md. */
+/**
+ * Adaptation thresholds: the numbers in docs/ADAPTATION_ENGINE.md (approved 2026-10-16).
+ * Reviewable coaching parameters; change them only with the product owner and bump the rule version.
+ */
 
 export interface AdaptationConfig {
-  /** Pain at or above this (0–10) on any recent session triggers the safety rule. */
+  // S — Safety
+  /** S-1: pain at or above this (0–10). */
   painThreshold: number;
-  painLookbackDays: number;
-  /** Days of protected (no hard running) schedule after a pain report. */
-  painProtectDays: number;
+  /** S-2: pain at or above this means rest only. */
+  painSevere: number;
+  /** S-1: days movements stay removed after a report; also the lookback for "same area twice". */
+  painMovementDays: number;
+  /** S-1: days after a report in which hard sessions are eased. */
+  painEaseDays: number;
+  /** S-3: days of easy or rest after "not feeling 100%". */
+  illnessEaseDays: number;
 
-  /** Number of recent key sessions examined for effort trends. */
-  trendWindow: number;
-  /** How many of those must show the signal before acting. */
-  trendMinHits: number;
-  /** Reported RPE this far above the prescribed max counts as "harder than intended". */
-  rpeExcess: number;
-  /** Work-interval pace slower than target by more than this fraction counts as a shortfall. */
-  paceShortfall: number;
-
-  /** Recovery baseline needs at least this many days from a single source. */
-  recoveryMinBaselineDays: number;
-  recoveryWindowDays: number;
-  recoveryMinFlaggedDays: number;
+  // F — Fatigue
+  /** RPE this far above the session's target counts as "much harder than intended" (F-1, F-2, P-3). */
+  rpeMargin: number;
+  /** F-2: hard-session work volume multiplier for the next week. */
+  hardVolumeReduction: number;
+  /** F-4: baseline days from one source, and days present in the last 7. */
+  recoveryBaselineDays: number;
+  recoveryRecentMinDays: number;
+  recoveryFlaggedDays: number;
   hrvSdBelow: number;
-  restingHrAbove: number;
-
-  /** Acute:chronic ratio above which the next week's volume is trimmed. */
+  /** F-5: fatigue or soreness (1–5) at or above this on 3 consecutive logs. */
+  fatigueHigh: number;
+  /** F-6 (load spike, kept by the product owner): acute:chronic ratio threshold and easy-run trim. */
   acwrHigh: number;
   loadSpikeReduction: number;
 
-  /** Fraction of planned sessions missed in the last 7 days that triggers a volume reset. */
-  missedFraction: number;
-  missedReduction: number;
+  // A — Adherence
+  /** A-2: trim to non-key sessions when the athlete chooses to pull back. */
+  pullBackReduction: number;
+  /** A-3: days with nothing logged before the check-in; re-entry and reassess thresholds. */
+  checkInAfterDays: number;
+  reentryAfterDays: number;
+  reassessAfterDays: number;
+  reentryFactor: number;
 
-  /** VDOT increase per progression decision, and minimum days between progressions. */
-  progressionStep: number;
-  progressionMinIntervalDays: number;
-  /** A new race changes targets only if VDOT differs by at least this much. */
+  // P — Progression
+  /** P-1: pace step per progression (fraction faster). */
+  progressionPaceStep: number;
+  /** P-3: pace easing after two misses. */
+  easePaceStep: number;
+
+  // T — Targets
+  /** A benchmark changes targets only if VDOT differs by at least this. */
   raceRecalcThreshold: number;
   raceRecalcMinConfidence: number;
-  /** Largest downward VDOT revision applied at once. */
-  maxVdotDrop: number;
+  /** Benchmarks older than this are not used. */
+  benchmarkMaxAgeDays: number;
+  benchmarkMinMeters: number;
 
-  /** Guardrail: max reduction of next 7 days' planned load from all decisions combined. */
+  // Guardrails (§4)
+  /** Max faster change to threshold pace per week. */
+  maxPaceGainPerWeek: number;
+  /** Max weekly run volume increase over the previous non-recovery week. */
+  maxWeeklyVolumeIncrease: number;
+  /** Max combined reduction of the next 7 days' planned load (safety exempt). */
   maxWeeklyLoadReduction: number;
 }
 
 export const DEFAULT_ADAPTATION_CONFIG: AdaptationConfig = {
   painThreshold: 4,
-  painLookbackDays: 3,
-  painProtectDays: 5,
+  painSevere: 7,
+  painMovementDays: 7,
+  painEaseDays: 3,
+  illnessEaseDays: 2,
 
-  trendWindow: 3,
-  trendMinHits: 2,
-  rpeExcess: 1.5,
-  paceShortfall: 0.04,
-
-  recoveryMinBaselineDays: 14,
-  recoveryWindowDays: 5,
-  recoveryMinFlaggedDays: 3,
+  rpeMargin: 2,
+  hardVolumeReduction: 0.2,
+  recoveryBaselineDays: 28,
+  recoveryRecentMinDays: 5,
+  recoveryFlaggedDays: 3,
   hrvSdBelow: 1,
-  restingHrAbove: 5,
-
+  fatigueHigh: 4,
   acwrHigh: 1.5,
   loadSpikeReduction: 0.15,
 
-  missedFraction: 0.5,
-  missedReduction: 0.2,
+  pullBackReduction: 0.15,
+  checkInAfterDays: 4,
+  reentryAfterDays: 7,
+  reassessAfterDays: 14,
+  reentryFactor: 0.7,
 
-  progressionStep: 0.5,
-  progressionMinIntervalDays: 21,
+  progressionPaceStep: 0.02,
+  easePaceStep: 0.02,
+
   raceRecalcThreshold: 1,
   raceRecalcMinConfidence: 0.6,
-  maxVdotDrop: 2,
+  benchmarkMaxAgeDays: 84,
+  benchmarkMinMeters: 3000,
 
-  maxWeeklyLoadReduction: 0.4,
+  maxPaceGainPerWeek: 0.03,
+  maxWeeklyVolumeIncrease: 0.1,
+  maxWeeklyLoadReduction: 0.3,
 };

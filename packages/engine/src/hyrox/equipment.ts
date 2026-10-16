@@ -121,6 +121,13 @@ const AVOID: Record<Limitation, readonly string[]> = {
   running_downhill: [],
 };
 
+/** True when a station or substitute, looked up by its display name, involves an avoided movement. */
+export function optionAvoidedByName(name: string, avoid: readonly string[]): boolean {
+  const all = [...Object.values(REAL), ...Object.values(SUBSTITUTES).flat()];
+  const hit = all.find((o) => o.name === name);
+  return hit ? isAvoided(hit.id, avoid) : false;
+}
+
 export function isAvoided(optionId: string, avoid: readonly string[]): boolean {
   return avoid.some((a) => (AVOID as Record<string, readonly string[]>)[a]?.includes(optionId));
 }

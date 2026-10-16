@@ -6,6 +6,12 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (step 7: adaptation engine)
+- **Done:** the adaptation engine now follows the approved rubric rule by rule (D-024). Built: S-1–S-3, F-1–F-6, A-1–A-5, P-1–P-3, T-1, T-2, Q-1, every §4 guardrail, and a weekly review object (`adaptPlan(...).review`). There are 33 adaptation tests (218 engine tests in total). Interpretations of the rubric wording for coach review are in `ADAPTATION_ENGINE.md` §11. Engine only: no app or database changes.
+- **Decided with Cameron (D-024):** pain area → movements map approved as drafted; fatigue and soreness logged as 1–5 taps (pain and RPE 0–10); load-spike rule kept as F-6.
+- **New engine inputs:** `PainReport` (level, area, sharp, stopped the session, altered movement), `CheckIn` ("not feeling 100%", pain improved), and `AthleteAnswer` (answers to the engine's questions by `questionId`). Step 6 logging should save these. `adaptation_decisions` can store the results as they are.
+- **Open (Claude Code):** step 6 logging, using the 1–5 scale and the pain fields. Then call `adaptPlan` on the server after each log and save a new plan version plus the decisions. P-4–P-7 and T-3 come once station and strength results are logged.
+
 ## 2026-10-16 — Claude Code on Cameron's Mac (step 5: plan storage)
 - **Done:** plans are saved on the server as immutable versions (D-022). Migration `20261016000006_plan_storage.sql` pushed live; Edge Function `generate-plan` deployed (Cameron ran `pnpm functions:deploy`; Claude Code's safety check blocks production deploys from Claude). The app saves answers, then builds a version on the server; the plan screen loads the saved version (or builds one on first open). This week's sessions carry over when answers change mid-week (Cameron's rule). Engine: `ENGINE_VERSION`, `planToRecord`/`planFromRecord`, `inputsFromProfile` (`src/store/`). Tests: engine round trip, phone vs server inputs agree, 57 database checks (new: plan versions server-only, carry-over, ownership, one active plan per goal), and a real 253-session plan stored and read back identical on a local Postgres.
 - **Verified by Cameron on the phone:** first plan built and shown from the server (version 1: 21 weeks, 176 sessions).

@@ -84,6 +84,16 @@ Notation: "hard session" = threshold, race-pace intervals, compromised run or si
 
 Pain is recorded by **movement or body area, not diagnosis** (onboarding rule). The engine never names an injury.
 
+**Pain area → movements removed by S-1** (approved 2026-10-16, D-024):
+
+| Area | Movements removed for 7 days |
+|---|---|
+| Knee | Deep knee bends, jumping, downhill running |
+| Lower back or hip | Heavy hinging |
+| Shoulder, elbow or wrist | Overhead |
+| Foot, ankle, shin or calf | Jumping; running is easy only (hard runs become easy runs) |
+| Other | Nothing removed automatically; the athlete is asked where it is |
+
 ### F — Fatigue
 
 | ID | Condition | Decision |
@@ -92,7 +102,8 @@ Pain is recorded by **movement or body area, not diagnosis** (onboarding rule). 
 | F-2 ✓ approved | Session RPE ≥ target + 2 on 3 of the last 4 hard sessions | Reduce next week's hard-session volume by 20% (fewer reps / rounds); ask about sleep and stress |
 | F-3 ✓ approved | Easy-run average HR above the easy ceiling on 3 of the last 5 easy runs, at the same or slower pace | Hold progression; ask a clarification question (heat, illness, stress) |
 | F-4 ✓ approved | HRV 7-day average below baseline by > 1 SD **and** resting HR above baseline, for ≥ 3 days | Swap the next hard session for an easy session; recheck in 2 days |
-| F-5 ✓ approved | Fatigue or soreness ≥ 4/5 on 3 consecutive logs | Add a rest day in the next 3 days (replacing the lowest-priority session) |
+| F-5 ✓ approved | Fatigue or soreness ≥ 4/5 on 3 consecutive logs (logged as 1–5 taps, D-024) | Add a rest day in the next 3 days (replacing the lowest-priority session) |
+| F-6 ✓ approved (added 2026-10-16) | Last 7 days' training load > 1.5× the 4-week average (needs a full 28-day window) | Trim easy and long runs over the next 7 days by 15%; hard sessions unchanged |
 
 ### A — Adherence
 
@@ -194,4 +205,27 @@ Each rule gets unit tests at its threshold edges, plus synthetic athlete histori
 | 2026-10-16 | A-3 days off | Changed: notify the athlete and let them pause (vacation, time off) or choose how to resume |
 | 2026-10-16 | P-7 weakest station | Changed: technique block plus more frequent exposure to that station |
 
+| 2026-10-16 | S-1 pain area → movements map | Approved as drafted (D-024) |
+| 2026-10-16 | Fatigue and soreness scale | 1–5 taps; pain and RPE stay 0–10 (D-024) |
+| 2026-10-16 | Load-spike rule from the original engine | Kept, as F-6 (D-024) |
+
 All rules, guardrails and data gates are approved. Open: the three *default, to confirm* details in A-2, A-3 and P-7. A-3 needs push notifications and a pause/vacation feature in the app (Phase 4).
+
+## 11. Implementation status (engine, 2026-10-16)
+
+Code: `packages/engine/src/adapt/` (rules in `rules/`, one file per group; arbiter in `engine.ts`). Tests: `test/adapt.test.ts`, one or more per rule plus the §9 scenarios. Rule ids in the code are the rubric ids.
+
+| Built | Rules |
+|---|---|
+| ✓ | S-1, S-2, S-3; F-1 to F-6; A-1 to A-5; P-1, P-2, P-3; T-1, T-2; Q-1; all guardrails in §4; the weekly review (checked / changed / kept / waiting on / questions) |
+| Waits for step 6 logging data | P-4, P-5 (station and run splits in compromised runs), P-6 (strength sets and reps in reserve), P-7 (station times), T-3 (simulation station times) |
+| Waits for app features | B-1 to B-5 (level and block changes, with the regenerate-plan function); A-3 pause/vacation (Phase 4) |
+
+**How the code reads the rubric where the text left room** (engine assumptions, open to the coach):
+- *More than 24 hours away* is counted in calendar days: non-safety changes apply from tomorrow.
+- *Repeat the session next time* (P-3, first miss): the next session of that type isn't progressed. Plans rotate formats, so it isn't copied.
+- P-1 and P-3 apply to threshold and race-pace sessions. If an extra rep would break the +10% weekly cap, P-1 makes the paces 2% faster instead.
+- S-2 (*rest until improvement*): rest days are set three days ahead and re-checked daily, so sessions come back soon after the athlete reports improvement. Limping (altered movement) counts as severe.
+- When a non-safety rule would leave a week with no hard session (often F-4 in base weeks, which have one), the athlete is asked first; "yes" applies it.
+- A-3's re-entry week (the athlete chose to resume) is exempt from the 30% weekly reduction cap, like B-4.
+- T-2's second data point is a second slower benchmark (P-3 on two session types is not used yet).

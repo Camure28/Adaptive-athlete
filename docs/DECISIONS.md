@@ -124,3 +124,12 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Decision:** Workouts are imported automatically through Apple Health first; it also carries Garmin Connect and Strava workouts that those apps write to it. The import logic is built now, before buying the Apple Developer Program, so it can be switched on as soon as the membership exists. No direct Garmin (new API access paused) or Strava (capped, and bans AI use, D-005) connection is planned for now.
 **Details:** `docs/INTEGRATIONS.md`, "Automatic workout import"; pipeline in `packages/engine/src/imports/`. `apple_health` stays out of `LLM_ELIGIBLE_SOURCES` until Apple's HealthKit rules are reviewed.
 **Status:** Accepted (product owner 2026-10-16, claude.ai Project chat). Number assigned by Claude Code, as that chat asked.
+
+## D-024 — Adaptation code follows the approved rubric; pain map, 1–5 scale, load spike (2026-10-16)
+**Decision:** The adaptation engine is rebuilt rule by rule from `ADAPTATION_ENGINE.md` (rule ids S-1 … T-2 in the code). The product owner also decided:
+- **Pain map (S-1):** knee removes deep knee bends, jumping and downhill running. Lower back or hip removes heavy hinging. Shoulder, elbow or wrist removes overhead work. Foot, ankle, shin or calf removes jumping and makes running easy only. Other areas: the athlete is asked where. Movements come back after 7 days.
+- **Fatigue and soreness are logged as 1–5 taps** (1 = fresh, 5 = very fatigued or sore); pain stays 0–10 with a body area; RPE stays 0–10. The logging screen (step 6) uses these scales.
+- **The load-spike rule stays**, as F-6: if the last 7 days' load is more than 1.5× the 4-week average, easy and long runs are trimmed 15% for a week.
+**Not built yet:** P-4 to P-7 and T-3 need the station and strength data from step 6 logging; B rules need the level-change screens. Interpretations of rubric wording are listed in `ADAPTATION_ENGINE.md` §11 for coach review.
+**Status:** Accepted (product owner 2026-10-16, claude.ai Project chat).
+

@@ -1,10 +1,13 @@
 /** Shared helpers for adaptation rules: plan lookups, compliance assessment, workout transforms. */
 
 import type {
+  AthleteAnswer,
+  CheckIn,
   CompletedWorkout,
   DailyRecovery,
   IsoDate,
   PlannedWorkout,
+  PlanWeek,
   RaceResult,
   SessionType,
   TrainingPlan,
@@ -21,9 +24,15 @@ export interface AdaptationInput {
   completed: CompletedWorkout[];
   recovery: DailyRecovery[];
   races: RaceResult[];
+  /** "Not feeling 100%" and pain updates outside a workout log. */
+  checkIns?: CheckIn[];
+  /** Answers to earlier engine questions. */
+  answers?: AthleteAnswer[];
 }
 
-export interface RuleContext extends AdaptationInput {
+export interface RuleContext extends Omit<AdaptationInput, "checkIns" | "answers"> {
+  checkIns: CheckIn[];
+  answers: AthleteAnswer[];
   cfg: AdaptationConfig;
   byPlannedId: Map<string, CompletedWorkout>;
   plannedById: Map<string, PlannedWorkout>;
@@ -34,7 +43,7 @@ export function makeContext(input: AdaptationInput, cfg: AdaptationConfig): Rule
   for (const c of input.completed) if (c.plannedWorkoutId) byPlannedId.set(c.plannedWorkoutId, c);
   const plannedById = new Map<string, PlannedWorkout>();
   for (const w of allWorkouts(input.plan)) plannedById.set(w.id, w);
-  return { ...input, cfg, byPlannedId, plannedById };
+  return { checkIns: [], answers: [], ...input, cfg, byPlannedId, plannedById };
 }
 
 export const allWorkouts = (plan: TrainingPlan): PlannedWorkout[] => plan.weeks.flatMap((w) => w.workouts);
@@ -75,6 +84,9 @@ export const EXPECTED_SESSION_RPE: Record<SessionType, { min: number; max: numbe
   full_simulation: { min: 8, max: 9 },
 };
 
+/** Reps up to 3% faster than the band still count as in band (rubric P-1, guardrail §4). */
+const FASTER_TOLERANCE = 0.03;
+
 export interface Compliance {
   planned: PlannedWorkout;
   completed: CompletedWorkout;
@@ -84,6 +96,8 @@ export interface Compliance {
   paceShortfall: number | null;
   /** Mean work-split pace relative to the fast bound (negative = faster than target). */
   paceVsFast: number | null;
+  /** Per-rep check against the pace band; null when there are no work splits with targets. */
+  reps: { total: number; inBand: number; slower: number; muchFaster: number } | null;
 }
 
 export function assessCompliance(planned: PlannedWorkout, completed: CompletedWorkout): Compliance {
@@ -92,6 +106,7 @@ export function assessCompliance(planned: PlannedWorkout, completed: CompletedWo
 
   let paceShortfall: number | null = null;
   let paceVsFast: number | null = null;
+  let reps: Compliance["reps"] = null;
   const workSplits = (completed.splits ?? []).filter((s) => {
     if (s.plannedStepIndex == null || s.distanceMeters == null || s.distanceMeters <= 0) return false;
     const step = planned.steps[s.plannedStepIndex];
@@ -108,8 +123,51 @@ export function assessCompliance(planned: PlannedWorkout, completed: CompletedWo
     }
     paceShortfall = ratiosSlow.reduce((a, b) => a + b, 0) / ratiosSlow.length;
     paceVsFast = ratiosFast.reduce((a, b) => a + b, 0) / ratiosFast.length;
+    const slower = ratiosSlow.filter((r) => r > 0.001).length;
+    const muchFaster = ratiosFast.filter((r) => r < -FASTER_TOLERANCE).length;
+    reps = { total: ratiosSlow.length, slower, muchFaster, inBand: ratiosSlow.length - slower - muchFaster };
   }
-  return { planned, completed, rpeDelta, paceShortfall, paceVsFast };
+  return { planned, completed, rpeDelta, paceShortfall, paceVsFast, reps };
+}
+
+/** The most recent `n` completed sessions matching `pred` (newest first), on or before today. */
+export function recentSessions(ctx: RuleContext, n: number, pred: (w: PlannedWorkout) => boolean): Compliance[] {
+  const out: Compliance[] = [];
+  const planned = allWorkouts(ctx.plan)
+    .filter((w) => pred(w) && w.date <= ctx.today)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  for (const p of planned) {
+    const c = ctx.byPlannedId.get(p.id);
+    if (!c || c.status === "skipped") continue;
+    out.push(assessCompliance(p, c));
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
+export const weekOf = (plan: TrainingPlan, date: IsoDate): PlanWeek | undefined =>
+  plan.weeks.find((w) => w.startDate <= date && addDays(w.startDate, 6) >= date);
+
+/** The first plan week starting after `today` ("next week"). */
+export const nextWeek = (plan: TrainingPlan, today: IsoDate): PlanWeek | undefined =>
+  plan.weeks.find((w) => w.startDate > today);
+
+export const isHard = (w: PlannedWorkout): boolean => HARD_SESSION_TYPES.has(w.type);
+
+/** Planned run metres for a week (what the 10% guardrail counts). */
+export const weekRunMeters = (week: PlanWeek): number =>
+  week.workouts.filter((w) => w.sport === "run" || w.sport === "trail_run").reduce((s, w) => s + (w.plannedDistanceMeters ?? 0), 0);
+
+/** A day in [from, to] with no session planned, whose neighbours aren't hard sessions (A-1, A-5). */
+export function freeNonAdjacentDay(plan: TrainingPlan, from: IsoDate, to: IsoDate, ignoreId?: string): IsoDate | null {
+  const workouts = allWorkouts(plan).filter((w) => w.id !== ignoreId);
+  const on = (d: IsoDate) => workouts.filter((w) => w.date === d && w.type !== "rest");
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (on(d).length > 0) continue;
+    if ([addDays(d, -1), addDays(d, 1)].some((n) => on(n).some(isHard))) continue;
+    return d;
+  }
+  return null;
 }
 
 /** The most recent `n` completed key sessions (newest first), on or before today. */
@@ -208,4 +266,53 @@ export function singleSourceRecovery(records: DailyRecovery[]): DailyRecovery[] 
   for (const r of records) counts.set(r.source, (counts.get(r.source) ?? 0) + 1);
   const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
   return records.filter((r) => r.source === top).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** A rest day in place of a session (keeps its id so history links the two). */
+export function restDay(w: PlannedWorkout, ruleId: string, title: string, rationale: string): PlannedWorkout {
+  return {
+    id: w.id,
+    date: w.date,
+    sport: "other",
+    type: "rest",
+    title,
+    objective: "Recover.",
+    rationale,
+    steps: [],
+    estimatedMinutes: 0,
+    plannedLoad: 0,
+    scaling: { easier: "Rest is the session." },
+    substitutions: ["An easy walk if it feels good"],
+    adaptedBy: ruleId,
+  };
+}
+
+/** Scale only the work steps (reps or distance) of a hard session, e.g. F-2's 20% cut. */
+export function scaleWork(w: PlannedWorkout, factor: number, ruleId: string, note: string): PlannedWorkout {
+  let removedMeters = 0;
+  const steps = w.steps.map((s) => {
+    if (s.kind !== "work") return s;
+    if ((s.repeat ?? 1) > 1) {
+      const repeat = Math.max(1, Math.round((s.repeat ?? 1) * factor));
+      removedMeters += ((s.repeat ?? 1) - repeat) * (s.distanceMeters ?? 0);
+      return { ...s, repeat };
+    }
+    if (s.distanceMeters != null) {
+      const d = Math.round((s.distanceMeters * factor) / 100) * 100;
+      removedMeters += s.distanceMeters - d;
+      return { ...s, distanceMeters: d };
+    }
+    if (s.durationSeconds != null) return { ...s, durationSeconds: Math.round((s.durationSeconds * factor) / 30) * 30 };
+    return s;
+  });
+  const out: PlannedWorkout = {
+    ...w,
+    steps,
+    estimatedMinutes: Math.round(w.estimatedMinutes * (0.5 + factor / 2)),
+    plannedLoad: Math.round(w.plannedLoad * (0.5 + factor / 2)),
+    rationale: `${note} ${w.rationale}`,
+    adaptedBy: ruleId,
+  };
+  if (w.plannedDistanceMeters != null) out.plannedDistanceMeters = Math.max(0, Math.round(w.plannedDistanceMeters - removedMeters));
+  return out;
 }
