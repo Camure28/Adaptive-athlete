@@ -10,13 +10,27 @@
 SQL Editor → New query → paste the whole of `supabase/setup.sql` → Run.
 It runs as one transaction: either everything is created or nothing is.
 
-## 2b. Applying later changes
-When a new file appears in `supabase/migrations/`, run **only that file** in the SQL Editor (New query → paste → Run), oldest first. Never re-run `setup.sql` on the live project.
+## 2b. Applying later changes (Supabase CLI)
+Database changes are applied from the repo with the Supabase CLI (a dev dependency, pinned). No more copy-pasting SQL. Never re-run `setup.sql` on the live project.
 
-| Migration | What it adds | Applied to live project |
-|---|---|---|
-| `20261016000004_training_status.sql` | Training status on the HYROX profile (D-018) | Not yet |
-| `20261016000005_hyrox_events.sql` | Race list (37 events), chosen race on the goal, result splits (D-019) | Not yet |
+**One-time setup on a Mac** (already done on Cameron's Mac, 2026-10-16). In Terminal, from the repo folder:
+```bash
+npx supabase login                                      # opens the browser; approve the CLI
+npx supabase link --project-ref hjqtbhnsjrmvpiudwnux    # press Enter if asked for the database password
+```
+The login token lives in the macOS keychain and the link in `supabase/.temp/` (git-ignored). The CLI connects through your login, so the database password isn't needed or stored.
+
+**Each time there's a new migration:**
+```bash
+git pull
+npx supabase db push --dry-run    # lists the migrations it would apply; nothing changes
+npx supabase db push              # applies them, oldest first, and records them as applied
+npx supabase migration list       # local and live columns should match
+```
+
+**If something was applied by hand in the SQL Editor**, record it so the CLI doesn't try to run it again: `npx supabase migration repair --status applied <version>` (the version is the number at the start of the file name). Only do this after checking the change really is in the database.
+
+**History:** migrations `20261015000001` to `20261016000005` were applied by hand in the SQL Editor (the last two via the combined `supabase_update_oct16.sql`). On 2026-10-16 we checked each was present in the live database (tables, columns, functions, grants, 37 race rows) and marked them applied with `migration repair`.
 
 To add or fix a race later: SQL Editor → `insert into hyrox_events (...) values (...)` or `update hyrox_events set ... where id = '...'`. Set `verified = true` once checked against HYROX's own announcement.
 

@@ -9,3 +9,6 @@ overrides:
   "@expo/dom-webview": "~57.0.1"
   "@expo/log-box": "~57.0.4"
   "expo-font": "~57.0.4"
+# Packages allowed to run install scripts. The Supabase CLI downloads its binary on install.
+onlyBuiltDependencies:
+  - supabase

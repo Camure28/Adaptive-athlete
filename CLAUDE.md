@@ -29,6 +29,20 @@ cd apps/mobile && npx expo run:ios --device       # rebuild/reinstall on the iPh
 cd packages/engine && npx tsx scripts/hyrox-sample.ts > ../../docs/samples/HYROX_SAMPLE_PLANS.md
 ```
 
+## Database changes (Supabase CLI)
+The repo is linked to the live project (`hjqtbhnsjrmvpiudwnux`) with the Supabase CLI, a pinned dev dependency. Migrations are applied with `db push`, not pasted into the SQL Editor.
+```bash
+npx supabase migration new <name>          # creates supabase/migrations/<timestamp>_<name>.sql
+pnpm db:test                               # isolation tests on a local Postgres
+npx supabase db push --dry-run             # shows what would be applied; show Cameron first
+npx supabase db push                       # applies it, only after Cameron says go
+npx supabase migration list                # local vs live history
+```
+- Never edit a migration that has already been pushed; add a new one.
+- Run `bash supabase/build_setup_sql.sh` after adding a migration so `setup.sql` stays complete for a brand-new project.
+- If a change was made by hand in the SQL Editor, confirm it exists live (`npx supabase db query --linked "..."`), then record it with `npx supabase migration repair --status applied <version>`.
+- The CLI uses Cameron's login (macOS keychain) and a temporary login role, so no database password is needed. If `supabase/.temp/project-ref` is missing (new machine or fresh clone), Cameron runs `npx supabase login` and `npx supabase link --project-ref hjqtbhnsjrmvpiudwnux`.
+
 ## Status (2026-10-16)
 - Done: engine (running + HYROX, adaptation rules, session variety), schema with tested isolation, onboarding, on-device plan preview, iPhone development build via Xcode (free Apple ID).
 - Supabase: email confirmation turned off for development; turn it back on before anyone else uses the app.

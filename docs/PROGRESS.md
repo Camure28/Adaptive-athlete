@@ -6,6 +6,10 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — Claude Code on Cameron's Mac
+- **Done:** Supabase CLI set up (dev dependency `supabase@2.119.0`, `supabase/config.toml`), repo linked to the live project. Checked the live database: all five migrations are present (the combined `supabase_update_oct16.sql` did run; 37 race rows), so they were marked applied with `migration repair`. `db push --dry-run` reports the database up to date. Workflow in `CLAUDE.md` and `docs/SETUP_SUPABASE.md` §2b.
+- **For every session:** new database changes are a new file in `supabase/migrations/`, applied with `npx supabase db push` from the Mac (dry run shown to Cameron first). No more pasting SQL into the editor. Chats without the Mac write the migration and leave "push pending" in this log.
+
 ## 2026-10-16 — claude.ai Project chat (build session, continued)
 - **Done:** rubric review applied, all approved with changes to A-2, A-3, P-7 (D-014). HYROX data terms researched (`INTEGRATIONS.md`): scraping results or events is not allowed without permission; ROXFIT isn't a listed HYROX partner. Race search at sign-up plus a manual past-result form with splits; name search built behind a switch, off until HYROX grants access (D-019). Partnership email drafted for Cameron.
 - **Open (Cameron):** run migrations `20261016000004` and `20261016000005` in the Supabase SQL Editor, in that order; send the HYROX partnership request (contact form at hyroxus.com/contact, or the US partnerships contact on hyroxus.com/sponsorships, or a warm intro through the gym's HYROX affiliate contact).
