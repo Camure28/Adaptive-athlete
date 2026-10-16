@@ -7,6 +7,12 @@ Adaptive HYROX training app. Cameron is the product owner (and a CrossFit coach)
 - Coaching content (session formats, substitutes, rules) is his call. Claude's defaults are marked "ENGINE ASSUMPTION" or "awaiting coach review" until he approves them.
 - Record decisions in `docs/DECISIONS.md` (D-001 onward). Never commit secrets; the Supabase secret key and database password never go in code or chat.
 
+## Keeping every session in sync
+Several Claude sessions work on this project (claude.ai Project chats, Claude Code on Cameron's Mac, a daily review). They share nothing except this repo, so:
+- **Start:** `git pull`, then read `docs/PROGRESS.md` (latest entries) and `docs/DECISIONS.md`.
+- **End:** add a dated entry at the top of `docs/PROGRESS.md` (where, done, open), record any decision in `DECISIONS.md`, update the Status section below if it changed, run the checks, commit and push.
+- If something in the repo contradicts what Cameron said in your session, ask him rather than silently overwriting it.
+
 ## Layout
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
 - `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
