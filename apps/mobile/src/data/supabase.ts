@@ -7,7 +7,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EMPTY_ANSWERS, toSavePayload, type Division, type OnboardingAnswers } from "@/onboarding/model";
-import type { Equipment, GymType, HyroxLevel, Limitation, Weekday } from "@adaptive-athlete/engine";
+import type { Equipment, GymType, HyroxLevel, Limitation, TrainingStatus, Weekday } from "@adaptive-athlete/engine";
 import { BackendError, type Account, type Backend } from "./backend";
 
 export class SupabaseBackend implements Backend {
@@ -76,6 +76,7 @@ export class SupabaseBackend implements Backend {
       goal: goal.data.target_finish_seconds ? "time" : "finish",
       targetTime: goal.data.target_finish_seconds ? hms(goal.data.target_finish_seconds) : "",
       level: profile.data.level as HyroxLevel,
+      trainingStatus: (profile.data.training_status ?? null) as TrainingStatus | null,
       pastHyroxTime: hyrox ? hms(hyrox.finish_seconds) : "",
       pastHyroxDate: hyrox ? usDate(hyrox.event_date) : "",
       weeklyRun: String(Math.round((profile.data.weekly_run_meters / ((athlete.data?.units ?? "mi") === "mi" ? 1609.344 : 1000)) * 10) / 10),

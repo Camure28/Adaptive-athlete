@@ -1,13 +1,15 @@
 /** The seven onboarding screens (docs/ONBOARDING.md). Each renders questions only; navigation lives in the route. */
 import { Text, View } from "react-native";
-import { EQUIPMENT, type Equipment, type GymType, type HyroxLevel, type Weekday } from "@adaptive-athlete/engine";
+import { EQUIPMENT, type Equipment, type GymType, type HyroxLevel, type TrainingStatus, type Weekday } from "@adaptive-athlete/engine";
 import { Callout, Choice, Field, Heading, Pills, Question, Stepper } from "@/components/ui";
+import { localToday } from "@/lib/session";
 import { space, type } from "@/lib/theme";
 import {
   applyGymTypes,
   doublesQuestionApplies,
   LIMITATION_LABELS,
   LIMITATIONS,
+  suggestStatusFromPastRace,
   type BenchmarkDistance,
   type Division,
   type Errors,
@@ -64,6 +66,12 @@ const LEVELS: { value: HyroxLevel; label: string; detail: string }[] = [
   { value: "competitive", label: "Competitive", detail: "Pro division or chasing World Championship qualification." },
 ];
 
+const STATUS: { value: TrainingStatus; label: string; detail: string }[] = [
+  { value: "building", label: "Building up", detail: "Coming back from a break, or new to structured training. Your plan starts with an easier base phase." },
+  { value: "consistent", label: "Training consistently", detail: "Training most weeks with some hard sessions. The base phase is shortened to 2 weeks." },
+  { value: "race_ready", label: "Race-ready", detail: "In a race block or raced in the last 8 weeks, with hard sessions every week. Your plan starts with race-specific training." },
+];
+
 function Experience({ a, update, errors }: StepProps) {
   return (
     <>
@@ -77,10 +85,15 @@ function Experience({ a, update, errors }: StepProps) {
         <Question label="Your best recent HYROX time (optional)" help="Skip this if you don't have it to hand." error={errors.pastHyroxTime ?? errors.pastHyroxDate}>
           <View style={{ flexDirection: "row", gap: space.sm }}>
             <Field style={{ flex: 1 }} value={a.pastHyroxTime} onChangeText={(pastHyroxTime) => update({ pastHyroxTime })} placeholder="1:32:10" accessibilityLabel="Past HYROX finish time" />
-            <Field style={{ flex: 1 }} value={a.pastHyroxDate} onChangeText={(pastHyroxDate) => update({ pastHyroxDate })} placeholder="MM/DD/YYYY" accessibilityLabel="Past HYROX race date" />
+            <Field style={{ flex: 1 }} value={a.pastHyroxDate} onChangeText={(pastHyroxDate) => update(suggestStatusFromPastRace(a, pastHyroxDate, localToday()))} placeholder="MM/DD/YYYY" accessibilityLabel="Past HYROX race date" />
           </View>
         </Question>
       ) : null}
+      <Question label="Where's your training right now?" help="This sets where your plan starts, so you don't repeat an easy build-up you've already done." error={errors.trainingStatus}>
+        {STATUS.map((st) => (
+          <Choice key={st.value} label={st.label} detail={st.detail} selected={a.trainingStatus === st.value} onPress={() => update({ trainingStatus: st.value })} />
+        ))}
+      </Question>
     </>
   );
 }
@@ -223,6 +236,7 @@ function Review({ a, update, errors }: StepProps) {
     ["Race date", a.raceDate],
     ["Division", DIVISIONS.find((d) => d.value === a.division)?.label ?? ""],
     ["Level", LEVELS.find((l) => l.value === a.level)?.label ?? ""],
+    ["Training now", STATUS.find((st) => st.value === a.trainingStatus)?.label ?? ""],
     ["Weekly running", `${a.weeklyRun || 0} ${a.units}`],
     ["Training days", a.days.slice().sort().map((d) => DAYS[d]!.label).join(", ")],
     ["Equipment", `${a.equipment.length} items`],

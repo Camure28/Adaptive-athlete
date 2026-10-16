@@ -375,3 +375,33 @@ describe("double days", () => {
     });
   }
 });
+
+// Product owner 2026-10-16: athletes already training hard don't restart with a base build.
+describe("training status", () => {
+  const phasesOf = (p: TrainingPlan) => p.weeks.map((w) => w.phase);
+  it("building up keeps the full base phase (the cautious default)", () => {
+    expect(phasesOf(plan(athlete("advanced", { trainingStatus: "building" })))).toEqual(phasesOf(plan(athlete("advanced"))));
+    expect(phasesOf(plan(athlete("advanced"))).filter((x) => x === "base").length).toBeGreaterThan(2);
+  });
+  it("training consistently caps base at 2 weeks", () => {
+    const p = plan(athlete("advanced", { trainingStatus: "consistent" }));
+    expect(phasesOf(p).filter((x) => x === "base").length).toBe(2);
+    expect(p.basis.notes.join(" ")).toMatch(/shortened/);
+  });
+  it("race-ready starts in build with full compromised rounds, from current volume", () => {
+    const a = athlete("advanced", { trainingStatus: "race_ready" });
+    const p = plan(a);
+    expect(phasesOf(p)).not.toContain("base");
+    expect(p.weeks[0]!.phase).toBe("build");
+    const cr = p.weeks[0]!.workouts.find((w) => w.type === "compromised_run");
+    expect(cr?.title).toMatch(String(LEVELS.advanced.compromisedRounds));
+    expect(p.weeks[0]!.targetRunMeters).toBe(a.currentWeeklyRunMeters.value);
+    // Taper, simulations and the 10% rule are unchanged.
+    expect(phasesOf(p).at(-1)).toBe("taper");
+    for (let i = 1; i < p.weeks.length; i++) {
+      if (p.weeks[i]!.phase !== "taper" && !p.weeks[i]!.isRecoveryWeek && !p.weeks[i - 1]!.isRecoveryWeek) {
+        expect(p.weeks[i]!.targetRunMeters).toBeLessThanOrEqual(Math.ceil(p.weeks[i - 1]!.targetRunMeters * 1.1) + 1);
+      }
+    }
+  });
+});

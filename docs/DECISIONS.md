@@ -87,3 +87,10 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 ## D-017 — Typography and keyboard handling (2026-10-16)
 **Decision:** Barlow Condensed for titles and Barlow for text (Google Fonts, bundled with the app). Sessions show three distinct voices: title, the work (semibold, with a coloured bar), and the explanation (regular, quieter). Text fields scroll into view above the keyboard.
 **Status:** Requested by product owner; fonts and layout are Claude's choice, open to change in the design pass.
+
+## D-018 — Training status sets where the plan starts (2026-10-16)
+**Decision:** Onboarding asks "Where's your training right now?" with three answers. *Building up* (returning from a break or new to structured training): full base phase, as before. *Training consistently*: base phase shortened to 2 weeks. *Race-ready* (in a race block or raced in the last 8 weeks, hard sessions every week): no base phase; the plan starts in build, with compromised runs and station work at build level. A HYROX entered as raced in the last 8 weeks pre-selects Race-ready; the athlete can change it.
+**Safety nets:** running volume still starts from what the athlete runs now and rises ≤ 10% a week; if early effort ratings come back too high, adaptation rules F-1/F-2 pull back (D-014). Athletes onboarded before this question are treated as Building up.
+**Why:** Athletes racing back to back are already fit; restarting them with weeks of easy base wastes their training and their trust.
+**Status:** Accepted (product owner 2026-10-16). The 2-week base for "Training consistently" is Claude's default, awaiting coach review. Needs migration `20261016000004_training_status.sql` applied to the live Supabase project.
+

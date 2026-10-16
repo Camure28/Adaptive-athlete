@@ -7,6 +7,7 @@ import {
   parseUsDate,
   toEngineInputs,
   toSavePayload,
+  suggestStatusFromPastRace,
   validateAll,
   validateStep,
   type OnboardingAnswers,
@@ -18,6 +19,7 @@ const complete: OnboardingAnswers = {
   raceDate: "02/27/2027",
   division: "women_open",
   level: "first_timer",
+  trainingStatus: "consistent",
   weeklyRun: "10",
   benchmarkDistance: "5k",
   benchmarkTime: "26:30",
@@ -92,5 +94,18 @@ describe("conversion", () => {
     expect(p.results).toHaveLength(2);
     expect(p.results[1]).toMatchObject({ kind: "hyrox", finishSeconds: 5700 });
     expect(p.consentHealthData).toBe(true);
+  });
+});
+
+describe("training status", () => {
+  it("is required on the experience step and passed to the engine and the save payload", () => {
+    expect(validateStep("experience", { ...complete, trainingStatus: null }, TODAY).trainingStatus).toBeDefined();
+    expect(toEngineInputs(complete, TODAY).athlete.trainingStatus).toBe("consistent");
+    expect(toSavePayload(complete, TODAY).trainingStatus).toBe("consistent");
+  });
+  it("a HYROX in the last 8 weeks pre-selects race-ready, without overriding a choice", () => {
+    expect(suggestStatusFromPastRace({ ...complete, trainingStatus: null }, "09/27/2026", TODAY).trainingStatus).toBe("race_ready");
+    expect(suggestStatusFromPastRace({ ...complete, trainingStatus: null }, "06/01/2026", TODAY).trainingStatus).toBeUndefined();
+    expect(suggestStatusFromPastRace(complete, "09/27/2026", TODAY).trainingStatus).toBeUndefined();
   });
 });

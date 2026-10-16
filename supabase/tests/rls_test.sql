@@ -202,7 +202,7 @@ select public.save_hyrox_onboarding('{
 }'::jsonb);
 -- Saving again with changed equipment replaces rather than duplicates
 select public.save_hyrox_onboarding('{
-  "units": "km", "level": "first_timer", "wantsDoubles": null, "gymTypes": ["crossfit"],
+  "units": "km", "level": "first_timer", "trainingStatus": "race_ready", "wantsDoubles": null, "gymTypes": ["crossfit"],
   "availableDays": [0,2,3,5], "longDay": 5, "weekdayMinutes": 60, "weekendMinutes": 90, "weeklyRunMeters": 16093,
   "equipment": ["outdoor_run", "rower"], "limitations": [], "limitationNote": "",
   "raceDate": "2027-03-06", "division": "women_open", "targetFinishSeconds": 5400,
@@ -217,6 +217,7 @@ select pg_temp.expect((select count(*) from public.goals) = 1 and (select event_
   're-saving updates the active goal instead of adding another');
 select pg_temp.expect((select count(*) from public.race_results) = 1, 're-saving does not duplicate results');
 select pg_temp.expect((select count(*) from public.consents) = 1, 'consent is recorded once per policy version');
+select pg_temp.expect((select training_status from public.hyrox_profiles) = 'race_ready', 'training status is saved and updated on re-save');
 do $$ begin
   perform public.save_hyrox_onboarding('{"units":"mi","level":"elite","availableDays":[0],"weekdayMinutes":60,"weekendMinutes":60,"weeklyRunMeters":0,"equipment":[],"limitations":[],"raceDate":"2027-01-01","division":"women_open"}'::jsonb);
   raise exception 'FAILED: invalid level saved';

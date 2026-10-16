@@ -63,12 +63,29 @@ export interface HyroxAthlete {
   equipment: Equipment[];
   /** Advanced: opt-in. Competitive: on unless set to false. Ignored for other levels. */
   wantsDoubles?: boolean;
+  /**
+   * Where the athlete's training is right now (PO 2026-10-16). Building up: full base phase.
+   * Training consistently: base capped at 2 weeks. Race-ready: no base; start in build.
+   * Defaults to "building" (the cautious start) when unknown.
+   */
+  trainingStatus?: TrainingStatus;
   /** Running benchmarks (5K, 10K, etc.) used for run paces. */
   runResults: RaceResult[];
   exclusions: string[];
 }
 
 export class HyroxPlanError extends Error {}
+
+export type TrainingStatus = "building" | "consistent" | "race_ready";
+
+/** Base weeks allowed by training status. ENGINE ASSUMPTION for "consistent" (2 weeks). */
+const BASE_WEEKS_MAX: Record<TrainingStatus, number> = { building: Infinity, consistent: 2, race_ready: 0 };
+
+/** Turns base weeks beyond the athlete's allowance into build weeks. */
+export function startPhases(phases: Phase[], status: TrainingStatus): Phase[] {
+  let base = 0;
+  return phases.map((p) => (p === "base" ? (base++ < BASE_WEEKS_MAX[status] ? "base" : "build") : p));
+}
 
 type Slot = { kind: HyroxSessionKind | "half_simulation" | "full_simulation"; rounds?: number };
 
@@ -108,7 +125,13 @@ export function generateHyroxPlan(
     notes.push(`Only ${totalWeeks} weeks until race day; ${HYROX_MIN_WEEKS}+ is recommended. The build is compressed.`);
   }
   const taperWeeks = totalWeeks >= 14 ? 2 : 1;
-  const phases = assignPhases(totalWeeks, taperWeeks);
+  const status = athlete.trainingStatus ?? "building";
+  const phases = startPhases(assignPhases(totalWeeks, taperWeeks), status);
+  if (status === "race_ready") {
+    notes.push("You're race-ready, so the plan skips the base phase and starts with build-phase sessions. Weekly running still starts from what you run now and rises no more than 10% a week.");
+  } else if (status === "consistent") {
+    notes.push("You're already training consistently, so the base phase is shortened to 2 weeks before build-phase sessions start.");
+  }
   const isRecovery = (i: number): boolean => phases[i] !== "taper" && (i + 1) % DEFAULT_PLAN_CONFIG.recoveryWeekEvery === 0;
 
   const start = Math.max(athlete.currentWeeklyRunMeters.value, 8_000);

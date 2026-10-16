@@ -14,7 +14,9 @@ import {
   type HyroxLevel,
   type Limitation,
   type RaceResult,
+  type TrainingStatus,
   type Weekday,
+  daysBetween,
 } from "@adaptive-athlete/engine";
 
 export type Division = "women_open" | "women_pro" | "men_open" | "men_pro";
@@ -32,6 +34,7 @@ export interface OnboardingAnswers {
   targetTime: string; // h:mm:ss
   // 2. Experience
   level: HyroxLevel | null;
+  trainingStatus: TrainingStatus | null;
   pastHyroxTime: string;
   pastHyroxDate: string;
   // 3. Running
@@ -62,6 +65,7 @@ export const EMPTY_ANSWERS: OnboardingAnswers = {
   goal: "finish",
   targetTime: "",
   level: null,
+  trainingStatus: null,
   pastHyroxTime: "",
   pastHyroxDate: "",
   weeklyRun: "",
@@ -126,6 +130,7 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
     }
     case "experience":
       if (!a.level) e.level = "Choose the level that fits you best.";
+      if (!a.trainingStatus) e.trainingStatus = "Choose where your training is right now.";
       if (a.pastHyroxTime && parseTime(a.pastHyroxTime) === null) e.pastHyroxTime = "Enter your time like 1:32:10.";
       if (a.pastHyroxTime && !parseUsDate(a.pastHyroxDate)) e.pastHyroxDate = "Add the race date as MM/DD/YYYY.";
       break;
@@ -211,6 +216,7 @@ export function toEngineInputs(a: OnboardingAnswers, today: string, athleteId = 
   };
   if (a.longDay !== null) athlete.preferredLongDay = a.longDay;
   if (a.level === "advanced" && a.wantsDoubles !== null) athlete.wantsDoubles = a.wantsDoubles;
+  if (a.trainingStatus) athlete.trainingStatus = a.trainingStatus;
 
   const goal: HyroxGoal = {
     id: "goal",
@@ -251,6 +257,7 @@ export function toSavePayload(a: OnboardingAnswers, today: string) {
     units: a.units,
     level: athlete.level,
     wantsDoubles: athlete.wantsDoubles ?? null,
+    trainingStatus: a.trainingStatus,
     gymTypes: a.gymTypes,
     availableDays: athlete.availableDays,
     longDay: a.longDay,
@@ -277,3 +284,11 @@ export const LIMITATION_LABELS: Record<Limitation, string> = {
   running_downhill: "Running downhill",
 };
 export { LIMITATIONS };
+
+/** A HYROX raced in the last 8 weeks suggests the athlete is race-ready (they can change it). */
+export const RECENT_RACE_DAYS = 56;
+export function suggestStatusFromPastRace(a: OnboardingAnswers, pastHyroxDate: string, today: string): Partial<OnboardingAnswers> {
+  const iso = parseUsDate(pastHyroxDate);
+  const recent = iso !== null && iso <= today && daysBetween(iso, today) <= RECENT_RACE_DAYS;
+  return recent && a.trainingStatus === null ? { pastHyroxDate, trainingStatus: "race_ready" } : { pastHyroxDate };
+}

@@ -12,4 +12,4 @@ export { llmSafeContext } from "./explain/llm-context.js";
 export * from "./hyrox/rulebook.js";
 export * from "./hyrox/equipment.js";
 export * from "./hyrox/config.js";
-export { generateHyroxPlan, HyroxPlanError, type HyroxAthlete } from "./hyrox/generator.js";
+export { generateHyroxPlan, HyroxPlanError, startPhases, type HyroxAthlete, type TrainingStatus } from "./hyrox/generator.js";

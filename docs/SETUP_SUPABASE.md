@@ -10,6 +10,13 @@
 SQL Editor → New query → paste the whole of `supabase/setup.sql` → Run.
 It runs as one transaction: either everything is created or nothing is.
 
+## 2b. Applying later changes
+When a new file appears in `supabase/migrations/`, run **only that file** in the SQL Editor (New query → paste → Run), oldest first. Never re-run `setup.sql` on the live project.
+
+| Migration | What it adds | Applied to live project |
+|---|---|---|
+| `20261016000004_training_status.sql` | Training status on the HYROX profile (D-018) | Not yet |
+
 ## 3. Connect the app
 Project Settings → API keys. Copy:
 - **Project URL** → `EXPO_PUBLIC_SUPABASE_URL`
