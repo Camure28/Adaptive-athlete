@@ -157,6 +157,8 @@ export interface WorkoutStep {
   recoveryBetween?: { durationSeconds: number; target: IntensityTarget; note?: string };
   /** Present on `station` steps: what to do at the station, with equipment-aware options. */
   station?: StationPrescription;
+  /** Present on strength steps: one exercise and its sets × reps. */
+  exercise?: { name: string; prescription: string };
   note?: string;
 }
 

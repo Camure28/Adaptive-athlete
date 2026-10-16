@@ -4,8 +4,8 @@
  * until then this screen says plainly that the plan isn't stored.
  */
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useMemo, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { generateHyroxPlan, HyroxPlanError, type PlannedWorkout, type PlanWeek, type TrainingPlan, type WorkoutStep } from "@adaptive-athlete/engine";
 import { Button, Callout, Heading, Screen } from "@/components/ui";
 import { backend } from "@/data";
@@ -71,14 +71,14 @@ function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; 
   const run = week.workouts.reduce((m, w) => m + (w.sport === "run" || w.sport === "hyrox" ? w.plannedDistanceMeters ?? 0 : 0), 0);
   const mins = week.workouts.reduce((m, w) => m + w.estimatedMinutes, 0);
   return (
-    <View style={{ marginBottom: space.sm, borderRadius: radius.row, backgroundColor: open ? color.surface : "transparent", borderWidth: 1, borderColor: open ? color.surface : color.rule }}>
-      <Pressable onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }} style={{ padding: space.lg, flexDirection: "row", alignItems: "baseline" }}>
+    <View style={[st.week, open && st.weekOpen]}>
+      <Pressable onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }} style={st.weekHead}>
         <View style={{ flex: 1 }}>
-          <Text style={type.title}>Week {week.index + 1}</Text>
-          <Text style={type.small}>
+          <Text style={type.eyebrow}>
             {PHASE[week.phase]}
-            {week.isRecoveryWeek ? ", lighter week" : ""}
+            {week.isRecoveryWeek ? " · lighter week" : ""}
           </Text>
+          <Text style={type.title}>Week {week.index + 1}</Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
           <Text style={[type.label, type.figure]}>{distance(run, units)} running</Text>
@@ -86,7 +86,7 @@ function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; 
         </View>
       </Pressable>
       {open ? (
-        <View style={{ paddingHorizontal: space.lg, paddingBottom: space.md }}>
+        <View style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>
           {week.workouts.map((w) => (
             <Session key={w.id} w={w} units={units} />
           ))}
@@ -96,58 +96,120 @@ function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; 
   );
 }
 
+const RUN_TAG = { label: "Run", bg: color.turfSoft, fg: color.turf };
+const TAG: Partial<Record<PlannedWorkout["sport"], { label: string; bg: string; fg: string }>> = {
+  run: RUN_TAG,
+  trail_run: RUN_TAG,
+  hyrox: { label: "HYROX", bg: color.ink, fg: color.surface },
+  strength: { label: "Strength", bg: color.note, fg: color.ink },
+};
+
 function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
   const [open, setOpen] = useState(false);
   const key = w.type === "race" || w.type.endsWith("simulation");
+  const tag = TAG[w.sport] ?? RUN_TAG;
   return (
-    <View style={{ borderTopWidth: 1, borderTopColor: color.concrete, paddingVertical: space.md }}>
+    <View style={st.session}>
       <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} style={{ flexDirection: "row", gap: space.md }}>
-        <Text style={[type.small, type.figure, { width: 92 }]}>{shortDate(w.date)}</Text>
+        <Text style={[type.small, type.figure, { width: 84, paddingTop: 3 }]}>{shortDate(w.date)}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={[type.body, key && { fontWeight: "700", color: color.turf }]}>{w.title}</Text>
-          <Text style={type.small}>{minutes(w.estimatedMinutes)}</Text>
+          <Text style={[type.title, { fontSize: 19, lineHeight: 23 }, key && { color: color.turf }]}>{w.title}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: 4 }}>
+            <View style={[st.tag, { backgroundColor: tag.bg }]}>
+              <Text style={[type.eyebrow, { fontSize: 10, lineHeight: 14, color: tag.fg }]}>{tag.label}</Text>
+            </View>
+            <Text style={[type.small, type.figure]}>{minutes(w.estimatedMinutes)}</Text>
+          </View>
         </View>
+        <Text style={[type.title, { color: color.iron }]}>{open ? "−" : "+"}</Text>
       </Pressable>
       {open ? (
-        <View style={{ marginTop: space.sm, marginLeft: 92 + space.md, gap: space.sm }}>
-          <Text style={type.small}>{w.rationale}</Text>
-          {w.steps.map((s, i) => (
-            <Step key={i} s={s} units={units} />
-          ))}
-          <Text style={type.small}>Easier option: {w.scaling.easier}</Text>
+        <View style={{ marginTop: space.md, gap: space.md }}>
+          <Text style={type.strong}>{w.objective}</Text>
+          <View>
+            <Text style={[type.eyebrow, { marginBottom: space.sm }]}>The work</Text>
+            <View style={st.work}>
+              {w.steps.map((s, i) => (
+                <Step key={i} s={s} units={units} />
+              ))}
+            </View>
+          </View>
+          <View>
+            <Text style={[type.eyebrow, { marginBottom: 4 }]}>Why</Text>
+            <Text style={type.explain}>{w.rationale}</Text>
+          </View>
+          <View>
+            <Text style={[type.eyebrow, { marginBottom: 4 }]}>Make it easier</Text>
+            <Text style={type.explain}>{w.scaling.easier}</Text>
+          </View>
         </View>
       ) : null}
     </View>
   );
 }
 
+/** One line of work: what to do in semibold, the target in regular, extras in small type. */
 function Step({ s, units }: { s: WorkoutStep; units: Units }) {
   const reps = s.repeat && s.repeat > 1 ? `${s.repeat} × ` : "";
-  if (s.station) {
-    const st = s.station;
+  const between = s.recoveryBetween ? `${minutesSeconds(s.recoveryBetween.durationSeconds)} ${s.recoveryBetween.note?.toLowerCase() ?? "rest"} between` : null;
+  if (s.exercise) {
     return (
-      <View>
-        <Text style={type.body}>
+      <Line>
+        <Text style={type.strong}>{s.exercise.name}</Text>
+        <Text style={[type.body, type.figure]}>{s.exercise.prescription}</Text>
+      </Line>
+    );
+  }
+  if (s.station) {
+    const sp = s.station;
+    return (
+      <Line accent={color.ink}>
+        <Text style={type.strong}>
           {reps}
-          {st.volume}: {st.recommended?.name ?? "no option available"}
-          {st.raceLoad ? ` at ${st.raceLoad}` : ""}
+          {sp.recommended?.name ?? "No option available"}
         </Text>
-        {st.load ? <Text style={type.small}>{st.load}</Text> : null}
-        {st.alternatives.length ? <Text style={type.small}>Or: {st.alternatives.map((a) => a.name).join(", ")}</Text> : null}
-        {st.unavailableNote ? <Callout tone={st.recommended ? "note" : "safety"}>{st.unavailableNote}</Callout> : null}
-      </View>
+        <Text style={[type.body, type.figure]}>
+          {sp.volume}
+          {sp.raceLoad ? ` at ${sp.raceLoad}` : ""}
+        </Text>
+        {sp.load ? <Text style={type.small}>{sp.load}</Text> : null}
+        {between ? <Text style={type.small}>{between}</Text> : null}
+        {sp.alternatives.length ? <Text style={type.small}>Or: {sp.alternatives.map((a) => a.name).join(", ")}</Text> : null}
+        {sp.unavailableNote ? <Callout tone={sp.recommended ? "note" : "safety"}>{sp.unavailableNote}</Callout> : null}
+      </Line>
     );
   }
   // HYROX run segments keep their official 1 km label (D-007).
-  const amount = s.distanceMeters === 1000 ? `1 km${units === "mi" ? " (0.62 mi)" : ""}` : s.distanceMeters ? distance(s.distanceMeters, units) : s.durationSeconds ? minutes(Math.round(s.durationSeconds / 60)) : "";
+  const amount = s.distanceMeters === 1000 ? `1 km${units === "mi" ? " (0.62 mi)" : ""}` : s.distanceMeters ? distance(s.distanceMeters, units) : s.durationSeconds ? minutesSeconds(s.durationSeconds) : "";
   const target = s.target.pace ? paceRange(s.target.pace.fastSecPerKm, s.target.pace.slowSecPerKm, units) : `effort ${s.target.rpe.min}–${s.target.rpe.max} out of 10`;
-  const what = { warmup: "Warm-up", cooldown: "Cool-down", recovery: "Recovery", work: "", steady: "", station: "" }[s.kind];
+  const what = { warmup: "Warm-up", cooldown: "Cool-down", recovery: "Rest", work: "", steady: "", station: "" }[s.kind];
+  const quiet = s.kind === "warmup" || s.kind === "cooldown" || s.kind === "recovery";
   return (
-    <Text style={type.body}>
-      {what ? `${what}: ` : ""}
-      {reps}
-      {amount}
-      {s.kind === "steady" && s.note && !s.distanceMeters ? `: ${s.note}` : ` at ${target}`}
-    </Text>
+    <Line accent={quiet ? color.rule : color.turf}>
+      <Text style={quiet ? type.body : type.strong}>
+        {what ? `${what}: ` : ""}
+        {reps}
+        {amount}
+      </Text>
+      {s.kind === "recovery" ? null : <Text style={[type.body, type.figure]}>at {target}</Text>}
+      {s.note ? <Text style={type.small}>{s.note}</Text> : null}
+      {between ? <Text style={type.small}>{between}</Text> : null}
+    </Line>
   );
 }
+
+function Line({ children, accent = color.turf }: { children: ReactNode; accent?: string }) {
+  return <View style={[st.line, { borderLeftColor: accent }]}>{children}</View>;
+}
+
+const minutesSeconds = (sec: number): string => (sec < 120 ? `${Math.round(sec)} s` : sec % 60 === 0 ? `${sec / 60} min` : `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`);
+
+const st = StyleSheet.create({
+  week: { marginBottom: space.sm, borderRadius: radius.row, borderWidth: 1, borderColor: color.rule },
+  weekOpen: { backgroundColor: color.surface, borderColor: color.surface },
+  weekHead: { padding: space.lg, flexDirection: "row", alignItems: "flex-end" },
+  session: { borderTopWidth: 1, borderTopColor: color.concrete, paddingVertical: space.md },
+  tag: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  work: { gap: space.sm },
+  line: { borderLeftWidth: 3, paddingLeft: space.md, paddingVertical: 2 },
+});

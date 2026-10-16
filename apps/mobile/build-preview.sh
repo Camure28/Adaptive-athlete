@@ -4,7 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 rm -rf dist preview
-EXPO_NO_TELEMETRY=1 env -u EXPO_PUBLIC_SUPABASE_URL -u EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY npx expo export --platform web >/dev/null
+# Expo loads .env.local on its own, so set it aside for the build to guarantee demo mode.
+if [ -f .env.local ]; then mv .env.local .env.local.preview-hold; trap 'mv .env.local.preview-hold .env.local' EXIT; fi
+EXPO_NO_TELEMETRY=1 env -u EXPO_PUBLIC_SUPABASE_URL -u EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY npx expo export --platform web --clear >/dev/null
 ENTRY=$(ls dist/_expo/static/js/web/entry-*.js | head -1)
 mkdir -p preview/js
 cp "$ENTRY" preview/js/app.js

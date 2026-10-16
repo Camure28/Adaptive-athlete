@@ -1,26 +1,49 @@
-import type { ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { createContext, useContext, useRef, type ReactNode } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { backend } from "@/data";
 import { color, radius, space, type } from "@/lib/theme";
 
-/** Page shell: demo banner (when applicable), scrollable content, pinned footer. */
+/** Lets a text field ask its page to scroll it into view above the keyboard. */
+const ScrollTo = createContext<((field: View | TextInput | null) => void) | null>(null);
+
+/**
+ * Page shell: demo banner (when applicable), scrollable content, pinned footer.
+ * The page shrinks above the keyboard, and a focused field scrolls into view, so what you type is
+ * never hidden. The footer button rides on top of the keyboard.
+ */
 export function Screen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+  const scroll = useRef<ScrollView>(null);
+  const content = useRef<View>(null);
+  const reveal = (field: View | TextInput | null) => {
+    // Wait for the keyboard to finish opening and the page to resize, then scroll the field to
+    // sit a comfortable distance below the top of the visible area.
+    setTimeout(() => {
+      if (!field || !content.current) return;
+      field.measureLayout(content.current, (_x, y) => scroll.current?.scrollTo({ y: Math.max(0, y - 96), animated: true }), () => undefined);
+    }, 250);
+  };
   return (
     <SafeAreaView style={s.page} edges={["top", "bottom"]}>
-      {backend.mode === "demo" ? (
-        <View style={s.demo} accessibilityRole="alert">
-          <Text style={s.demoText}>Demo mode: nothing you enter is saved.</Text>
-        </View>
-      ) : null}
-      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-        <View style={s.column}>{children}</View>
-      </ScrollView>
-      {footer ? (
-        <View style={s.footer}>
-          <View style={s.column}>{footer}</View>
-        </View>
-      ) : null}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        {backend.mode === "demo" ? (
+          <View style={s.demo} accessibilityRole="alert">
+            <Text style={s.demoText}>Demo mode: nothing you enter is saved.</Text>
+          </View>
+        ) : null}
+        <ScrollTo.Provider value={reveal}>
+          <ScrollView ref={scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+            <View ref={content} style={s.column}>
+              {children}
+            </View>
+          </ScrollView>
+        </ScrollTo.Provider>
+        {footer ? (
+          <View style={s.footer}>
+            <View style={s.column}>{footer}</View>
+          </View>
+        ) : null}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -92,7 +115,7 @@ export function Choice({
         {selected ? <View style={multi ? s.boxTick : s.dotFill} /> : null}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[type.body, selected && { fontWeight: "600" }]}>{label}</Text>
+        <Text style={selected ? type.strong : type.body}>{label}</Text>
         {detail ? <Text style={type.small}>{detail}</Text> : null}
       </View>
     </Pressable>
@@ -130,8 +153,21 @@ export function Pills<T extends string | number>({
 }
 
 export function Field(props: TextInputProps & { invalid?: boolean }) {
-  const { invalid, style, ...rest } = props;
-  return <TextInput placeholderTextColor="#7A8288" style={[s.field, invalid && { borderColor: color.safety }, style]} {...rest} />;
+  const { invalid, style, onFocus, ...rest } = props;
+  const reveal = useContext(ScrollTo);
+  const ref = useRef<TextInput>(null);
+  return (
+    <TextInput
+      ref={ref}
+      placeholderTextColor="#7A8288"
+      style={[s.field, invalid && { borderColor: color.safety }, style]}
+      onFocus={(e) => {
+        reveal?.(ref.current);
+        onFocus?.(e);
+      }}
+      {...rest}
+    />
+  );
 }
 
 /** − value + control for minutes. */
@@ -204,7 +240,7 @@ const s = StyleSheet.create({
   pills: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   pill: { minWidth: 48, minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, alignItems: "center", justifyContent: "center", backgroundColor: color.surface },
   pillOn: { backgroundColor: color.turf, borderColor: color.turf },
-  field: { ...type.body, minHeight: 48, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface },
+  field: { ...type.body, minWidth: 0, minHeight: 48, paddingHorizontal: space.md, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface },
   stepper: { flexDirection: "row", alignItems: "center", gap: space.md },
   stepBtn: { width: 48, height: 48, borderRadius: radius.control, borderWidth: 1, borderColor: color.rule, backgroundColor: color.surface, alignItems: "center", justifyContent: "center" },
   btn: { minHeight: 52, borderRadius: radius.control, backgroundColor: color.turf, alignItems: "center", justifyContent: "center" },

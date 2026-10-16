@@ -46,3 +46,16 @@ Implemented in `packages/engine/src/hyrox/`. Items here are Claude's working def
 8. **Substitutes are prescribed by time,** using estimated station times of about 5:30 / 4:30 / 3:45 / 3:10 per station by level.
 9. **Double days** never pair two of the same session type, and prefer pairing a compromised run with a running-only session.
 10. **Easy runs** are never longer than 75% of that week's long run.
+
+## Session variety (product owner request 2026-10-16)
+No session repeats within a week, and key sessions change format from one week to the next. The format depends on the week number and on how many sessions of that kind came earlier in the week. Implemented in `packages/engine/src/hyrox/generator.ts` and `strength.ts`; pinned by the "variety" tests. **The formats below are Claude's defaults, awaiting coach review.**
+
+| Session | Formats (rotating) |
+|---|---|
+| Threshold | 4 × 1 mile (90 s jog) · 6 × 1 km (60 s) · tempo run, 5–6 km continuous · 3 × 2 km (2 min). Base and lighter weeks use one fewer rep or a shorter tempo |
+| Race-pace intervals | N × 1 km (90 s) · 2 sets of N/2 × 1 km (60 s, 3 min between sets) · N × (1 km on, 500 m float) |
+| Compromised run | Classic: station → 1 km · Station pairs: 2 stations → 1 km (station volume × 0.75) · Short and sharp: half-volume station → 500 m, two extra rounds. Taper and race week always use the classic format |
+| Station endurance | Sets: 3 sets per station · Circuit: 3 rounds of 4 stations, 2½ min between rounds · Intervals: a block every 3 minutes, 2 per station |
+| Long run | Steady; in build and peak, every other week finishes the last 25% at steady-strong (marathon) effort |
+| Easy runs | The first easy run each week (except race week) adds 6 × 20 s strides |
+| Strength | Day A, legs & push: squat pattern, single-leg, upper push, trunk. Day B, hinge & pull: hinge, row, straight-arm pulldown, carry, trunk. A second strength day in a week is always the other day. Exercises rotate every 3 weeks; sets × reps follow the phase (base 3 × 10, build 4 × 6, peak 3 × 5, taper 2 × 5) |

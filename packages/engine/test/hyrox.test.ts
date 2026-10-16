@@ -233,7 +233,8 @@ describe("station prescriptions", () => {
     for (const w of all(p).filter((x) => x.type === "strength")) {
       const text = w.steps.map((s) => s.note ?? "").join(" ");
       expect(text).not.toMatch(/\bSled push\b|\bSkiErg\b|\bSled pull\b/);
-      expect(text).toMatch(/pulldowns/);
+      // Day B carries the SkiErg support work (coach: pulldowns first on strength days).
+      if (w.title.includes(" B:")) expect(text).toMatch(/pulldowns/);
     }
   });
 
@@ -317,5 +318,44 @@ describe("input validation", () => {
   it("flags a compressed timeline instead of silently cramming", () => {
     const p = plan(athlete("intermediate"), goal({ date: "2026-12-05" }));
     expect(p.basis.notes.join(" ")).toMatch(/recommended/);
+  });
+});
+
+// Product owner feedback 2026-10-16: no session repeated within a week; variety week to week.
+describe("variety", () => {
+  const levels: HyroxLevel[] = ["first_timer", "intermediate", "advanced", "competitive"];
+
+  it("never repeats a session within a week (easy runs aside)", () => {
+    for (const level of levels) {
+      for (const w of plan(athlete(level)).weeks) {
+        const titles = w.workouts.filter((x) => x.type !== "easy_run").map((x) => x.title);
+        expect(new Set(titles).size, `${level} week ${w.index + 1}: ${titles.join(" | ")}`).toBe(titles.length);
+      }
+    }
+  });
+
+  it("changes the format of key sessions from one week to the next", () => {
+    for (const level of levels) {
+      const p = plan(athlete(level));
+      for (const type of ["threshold", "race_pace_intervals", "compromised_run", "station_endurance"] as const) {
+        const firstOf = (i: number) => p.weeks[i]!.workouts.find((x) => x.type === type);
+        for (let i = 1; i < p.weeks.length; i++) {
+          const a = firstOf(i - 1);
+          const b = firstOf(i);
+          if (!a || !b || p.weeks[i]!.phase === "taper" || p.weeks[i - 1]!.phase === "taper") continue;
+          expect(b.title.replace(/\d+/g, "#"), `${level} ${type} weeks ${i}–${i + 1}`).not.toBe(a.title.replace(/\d+/g, "#"));
+        }
+      }
+    }
+  });
+
+  it("pairs strength days A and B in a week, and rotates exercises every three weeks", () => {
+    const p = plan(athlete("intermediate"));
+    const two = p.weeks.find((w) => w.workouts.filter((x) => x.type === "strength").length === 2)!;
+    const days = two.workouts.filter((x) => x.type === "strength").map((x) => x.title.match(/ ([AB]):/)![1]).sort();
+    expect(days).toEqual(["A", "B"]);
+    const exercises = (w: PlannedWorkout) => w.steps.flatMap((s) => (s.exercise ? [s.exercise.name] : [])).join("|");
+    const aDays = all(p).filter((x) => x.type === "strength" && x.title.includes(" A:"));
+    expect(new Set(aDays.map(exercises)).size).toBeGreaterThan(1);
   });
 });

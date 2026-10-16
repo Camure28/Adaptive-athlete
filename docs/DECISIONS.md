@@ -61,3 +61,12 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Limits:** Builds signed with a free Apple ID expire after 7 days and can't be shared. TestFlight for pilot athletes needs the paid Apple Developer Program; decide before the gym pilot.
 **Details:** `pnpm-workspace.yaml` pins four Expo peer packages to SDK 57; update them with the SDK.
 **Status:** Accepted (product owner chose the Xcode route 2026-10-15).
+
+## D-013 — Session variety (2026-10-16)
+**Decision:** No session is repeated within a week and key sessions rotate formats week to week (threshold, race pace, compromised runs, station work, long runs, strides on easy runs). Strength is split into Day A (legs & push) and Day B (hinge & pull); exercises rotate every 3 weeks so lifts stay long enough to progress. Formats listed in `docs/HYROX_WEEK.md`.
+**Why:** Product owner testing: the same workout appeared twice in a week and weeks repeated. Variety keeps athletes engaged and trains different qualities; rotating strength by 3-week block keeps progressive overload.
+**Status:** Requested by product owner; formats are Claude's defaults awaiting coach review.
+
+## D-014 — Typography and keyboard handling (2026-10-16)
+**Decision:** Barlow Condensed for titles and Barlow for text (Google Fonts, bundled with the app). Sessions show three distinct voices: title, the work (semibold, with a coloured bar), and the explanation (regular, quieter). Text fields scroll into view above the keyboard.
+**Status:** Requested by product owner; fonts and layout are Claude's choice, open to change in the design pass.

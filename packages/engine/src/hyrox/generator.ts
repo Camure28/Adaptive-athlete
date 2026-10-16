@@ -39,6 +39,7 @@ import { assignPhases, progressVolumes } from "../plan/generator.js";
 import { runStep, stepMeters, stepSeconds, target, timeStep, zonePace, type BuildContext } from "../plan/workouts.js";
 import { raceLoad, RACE_VOLUME, STATION_NAMES, STATION_ORDER } from "./rulebook.js";
 import { resolveStation, type Equipment, type SessionContext } from "./equipment.js";
+import { strengthItems } from "./strength.js";
 import {
   FULL_SIM_MIN_DAYS_BEFORE_RACE,
   FULL_SIM_PREFERRED_DAYS_BEFORE_RACE,
@@ -152,13 +153,18 @@ export function generateHyroxPlan(
 
     // Fixed-distance run content first (sessions with known run meters), then easy runs fill.
     let fixedRun = 0;
+    // Variety: each session kind has several formats. The format depends on the week and on how many
+    // of that kind came earlier in the same week, so a week never repeats a session and consecutive
+    // weeks differ.
+    const seen = new Map<Slot["kind"], number>();
     const build = (slot: Slot, date: IsoDate): PlannedWorkout => {
-      const w = buildSession(slot, date, {
-        ctx, athlete, goal, phase, runVolume, stationCursor: stationCursor, opts,
+      const occurrence = seen.get(slot.kind) ?? 0;
+      seen.set(slot.kind, occurrence + 1);
+      return buildSession(slot, date, {
+        ctx, athlete, goal, phase, runVolume, stationCursor, opts, week: i, occurrence, recovery,
       });
-      return w;
     };
-    const order = [...placed].sort((a, b) => priorityOf(a.slot) - priorityOf(b.slot));
+    const order = [...placed].sort((a, b) => priorityOf(a.slot) - priorityOf(b.slot) || a.date.localeCompare(b.date));
     for (const p of order) {
       if (p.slot.kind === "easy_run") continue;
       const w = build(p.slot, p.date);
@@ -166,16 +172,17 @@ export function generateHyroxPlan(
       fixedRun += w.plannedDistanceMeters ?? 0;
       workouts.push(w);
     }
-    const easySlots = placed.filter((p) => p.slot.kind === "easy_run");
+    const easySlots = placed.filter((p) => p.slot.kind === "easy_run").sort((a, b) => a.date.localeCompare(b.date));
     if (easySlots.length > 0) {
       const longest = Math.max(0, ...workouts.filter((w) => w.type === "long_run").map((w) => w.plannedDistanceMeters ?? 0));
       const perRaw = Math.max(3000, (runVolume - fixedRun) / easySlots.length);
       const per = longest > 0 ? Math.min(perRaw, longest * 0.75) : perRaw;
-      for (const p of easySlots) {
+      easySlots.forEach((p, k) => {
         const weekend = weekdayIndex(p.date, monday) >= 5;
         const cap = ((weekend ? athlete.maxWeekendMinutes : athlete.maxWeekdayMinutes) * 60 / zonePace(ctx, "easy")) * 1000;
-        workouts.push(easyRunHyrox(ctx, opts.planId, p.date, Math.min(per, cap)));
-      }
+        // The week's first easy run carries strides (except race week), so easy days differ too.
+        workouts.push(easyRunHyrox(ctx, opts.planId, p.date, Math.min(per, cap), k === 0 && !raceWeek));
+      });
     }
     if (raceWeek) workouts.push(raceDay(opts.planId, goal, athlete.level));
 
@@ -429,7 +436,16 @@ interface SessionEnv {
   runVolume: number;
   stationCursor: number;
   opts: { planId: string };
+  /** Plan week index and how many sessions of this kind came earlier this week (format rotation). */
+  week: number;
+  occurrence: number;
+  recovery: boolean;
 }
+
+/** Format index for a session with `n` formats: differs within a week and from the week before. */
+const variant = (env: SessionEnv, n: number): number => (env.week + env.occurrence) % n;
+const REST = (seconds: number, note?: string): NonNullable<WorkoutStep["recoveryBetween"]> =>
+  note ? { durationSeconds: seconds, target: { zone: "recovery", rpe: { min: 1, max: 2 } }, note } : { durationSeconds: seconds, target: { zone: "recovery", rpe: { min: 1, max: 2 } } };
 
 const STATION_TARGET: IntensityTarget = { zone: "threshold", rpe: { min: 7, max: 8 } };
 const STRENGTH_TARGET: IntensityTarget = { zone: "threshold", rpe: { min: 6, max: 8 } };
@@ -479,7 +495,7 @@ function stationStep(env: SessionEnv, station: HyroxStation, fraction: number, c
 function finalize(env: SessionEnv, w: Omit<PlannedWorkout, "estimatedMinutes" | "plannedLoad" | "plannedDistanceMeters">): PlannedWorkout {
   const seconds = w.steps.reduce((s, st) => s + stepSeconds(env.ctx, st), 0);
   const runMeters = w.steps
-    .filter((st) => st.kind !== "station" && w.sport !== "strength")
+    .filter((st) => st.kind !== "station" && st.kind !== "recovery" && w.sport !== "strength")
     .reduce((m, st) => m + stepMeters(env.ctx, st), 0);
   const load = w.steps.reduce((s, st) => s + (stepSeconds(env.ctx, st) / 60) * ((st.target.rpe.min + st.target.rpe.max) / 2), 0);
   const out: PlannedWorkout = { ...w, estimatedMinutes: Math.round(seconds / 60), plannedLoad: Math.round(load) };
@@ -495,63 +511,123 @@ function buildSession(slot: Slot, date: IsoDate, env: SessionEnv): PlannedWorkou
   switch (slot.kind) {
     case "long_run": {
       const meters = Math.max(5000, Math.min(env.runVolume * 0.32, 18_000));
+      const progression = (env.phase === "build" || env.phase === "peak") && !env.recovery && env.week % 2 === 1;
       return finalize(env, {
         id: wid(opts.planId, date, "long_run"), date, sport: "run", type: "long_run",
-        title: "Long run",
-        objective: "Build the aerobic engine that carries you through 8 km of running between stations.",
-        rationale: "HYROX is an endurance race. Easy long runs raise the pace you can hold while fatigued, at low injury risk.",
-        steps: [runStep(ctx, "steady", meters, "easy")],
-        scaling: { easier: "Cut the last 15–20% if form breaks down." },
+        title: progression ? "Long run: progression finish" : "Long run",
+        objective: progression
+          ? "Aerobic endurance, finishing strong on tired legs."
+          : "Build the aerobic engine that carries you through 8 km of running between stations.",
+        rationale: progression
+          ? "Finishing the last quarter at a steady-strong effort teaches you to hold pace late in the race, when HYROX is won or lost."
+          : "HYROX is an endurance race. Easy long runs raise the pace you can hold while fatigued, at low injury risk.",
+        steps: progression
+          ? [runStep(ctx, "steady", meters * 0.75, "easy"), runStep(ctx, "work", meters * 0.25, "marathon", { note: "Steady-strong: controlled, not racing" })]
+          : [runStep(ctx, "steady", meters, "easy")],
+        scaling: { easier: progression ? "Keep the whole run easy." : "Cut the last 15–20% if form breaks down." },
         substitutions: ["Split between treadmill and bike erg at easy effort"],
       });
     }
     case "threshold": {
-      const reps = env.phase === "base" ? 3 : 4;
+      const base = env.phase === "base" || env.recovery;
+      const jog = (s: number) => REST(s, "Easy jog");
+      const formats = [
+        { title: base ? "Threshold: 3 × 1 mile" : "Threshold: 4 × 1 mile", work: runStep(ctx, "work", 1600, "threshold", { repeat: base ? 3 : 4, recoveryBetween: jog(90) }) },
+        { title: base ? "Threshold: 5 × 1 km" : "Threshold: 6 × 1 km", work: runStep(ctx, "work", 1000, "threshold", { repeat: base ? 5 : 6, recoveryBetween: jog(60) }) },
+        { title: "Tempo run", work: runStep(ctx, "work", base ? 4000 : env.phase === "peak" ? 6000 : 5000, "threshold", { note: "One continuous effort at threshold" }) },
+        { title: base ? "Threshold: 2 × 2 km" : "Threshold: 3 × 2 km", work: runStep(ctx, "work", 2000, "threshold", { repeat: base ? 2 : 3, recoveryBetween: jog(120) }) },
+      ];
+      const f = formats[variant(env, formats.length)]!;
       return finalize(env, {
         id: wid(opts.planId, date, "threshold"), date, sport: "run", type: "threshold",
-        title: `Threshold: ${reps} repeats`,
+        title: f.title,
         objective: "Raise the running pace you can sustain under fatigue.",
-        rationale: "Threshold work is the backbone of HYROX run fitness: it lets you run each 1 km segment faster without blowing up at the next station.",
-        steps: [
-          runStep(ctx, "warmup", 2000, "easy"),
-          runStep(ctx, "work", 1600, "threshold", { repeat: reps, recoveryBetween: { durationSeconds: 90, target: { zone: "recovery", rpe: { min: 1, max: 2 } }, note: "Easy jog" } }),
-          runStep(ctx, "cooldown", 1500, "easy"),
-        ],
-        scaling: { easier: "Drop one rep; hold the pace rather than adding reps." },
+        rationale: "Threshold work is the backbone of HYROX run fitness: it lets you run each 1 km segment faster without blowing up at the next station. The format changes each week; the effort stays the same.",
+        steps: [runStep(ctx, "warmup", 2000, "easy"), f.work, runStep(ctx, "cooldown", 1500, "easy")],
+        scaling: { easier: "Drop one rep (or 1 km of tempo); hold the pace rather than adding volume." },
         substitutions: ["Treadmill at 1% incline"],
       });
     }
     case "race_pace_intervals": {
       const reps = Math.min(8, lvl.compromisedRounds + 1);
+      const half = Math.ceil(reps / 2);
+      const formats: { title: string; steps: WorkoutStep[]; note: string }[] = [
+        {
+          title: `Race pace: ${reps} × 1 km`,
+          steps: [runStep(ctx, "work", 1000, "threshold", { repeat: reps, recoveryBetween: REST(90, "Walk or easy jog") })],
+          note: "Repeat the race's 1 km segment at goal pace so you don't go out too fast on run 1.",
+        },
+        {
+          title: `Race pace: 2 sets of ${half} × 1 km`,
+          steps: [
+            runStep(ctx, "work", 1000, "threshold", { repeat: half, recoveryBetween: REST(60, "Easy jog") }),
+            timeStep(ctx, "recovery", 180, "recovery", { note: "Walk between sets" }),
+            runStep(ctx, "work", 1000, "threshold", { repeat: half, recoveryBetween: REST(60, "Easy jog") }),
+          ],
+          note: "Short rests teach you to settle into race pace quickly, the way you must after each station.",
+        },
+        {
+          title: `Race pace: ${reps} × (1 km on, 500 m float)`,
+          steps: [runStep(ctx, "work", 1000, "threshold", {
+            repeat: reps,
+            recoveryBetween: { durationSeconds: Math.round(0.5 * zonePace(ctx, "marathon")), target: target(ctx, "marathon"), note: "500 m float at steady effort; keep moving" },
+          })],
+          note: "No stopping between kilometres: like race day, you recover while still moving.",
+        },
+      ];
+      const f = formats[variant(env, formats.length)]!;
       return finalize(env, {
         id: wid(opts.planId, date, "race_pace_intervals"), date, sport: "run", type: "race_pace_intervals",
-        title: `Race-pace intervals: ${reps} × 1 km`,
+        title: f.title,
         objective: "Lock in your HYROX 1 km run pace.",
-        rationale: "Repeating the race's 1 km segment at goal pace teaches pacing so you don't go out too fast on run 1.",
-        steps: [
-          runStep(ctx, "warmup", 2000, "easy"),
-          runStep(ctx, "work", 1000, "threshold", { repeat: reps, recoveryBetween: { durationSeconds: 90, target: { zone: "recovery", rpe: { min: 1, max: 2 } }, note: "Walk or easy jog" } }),
-          runStep(ctx, "cooldown", 1500, "easy"),
-        ],
+        rationale: f.note,
+        steps: [runStep(ctx, "warmup", 2000, "easy"), ...f.steps, runStep(ctx, "cooldown", 1500, "easy")],
         scaling: { easier: "Lengthen recoveries to 2 min.", harder: "Shorten recoveries, not the pace." },
         substitutions: ["Treadmill"],
       });
     }
     case "compromised_run": {
       const rounds = slot.rounds ?? lvl.compromisedRounds;
-      const stations = pickStations(env.stationCursor, rounds);
       const fraction = env.phase === "taper" ? 0.25 : lvl.stationVolumeFraction;
-      const steps: WorkoutStep[] = [runStep(ctx, "warmup", 1500, "easy", { note: "Plus dynamic mobility and 2 short station primers" })];
-      for (const st of stations) {
-        steps.push(stationStep(env, st, fraction, "race_specific"));
-        steps.push(raceKm(ctx, "Run straight off the station at HYROX race effort"));
+      const warmup = runStep(ctx, "warmup", 1500, "easy", { note: "Plus dynamic mobility and 2 short station primers" });
+      // Taper and race week keep the familiar format; other weeks rotate.
+      const format = env.phase === "taper" ? 0 : variant(env, 3);
+      let title: string;
+      let rationale: string;
+      const steps: WorkoutStep[] = [warmup];
+      if (format === 1) {
+        const pairs = Math.max(2, Math.ceil(rounds / 2));
+        const stations = pickStations(env.stationCursor, pairs * 2);
+        for (let k = 0; k < pairs; k++) {
+          steps.push(stationStep(env, stations[2 * k]!, fraction * 0.75, "race_specific"));
+          steps.push(stationStep(env, stations[2 * k + 1]!, fraction * 0.75, "race_specific"));
+          steps.push(raceKm(ctx, "Run straight off the second station at HYROX race effort"));
+        }
+        title = `Compromised run: station pairs × ${pairs}`;
+        rationale = "Two stations back to back before each run builds the deeper fatigue of the race's later stages, so the 1 km that follows teaches you to find your rhythm on heavy legs.";
+      } else if (format === 2) {
+        const n = rounds + 2;
+        const stations = pickStations(env.stationCursor, n);
+        for (const st of stations) {
+          steps.push(stationStep(env, st, fraction / 2, "race_specific"));
+          steps.push({ kind: "work", distanceMeters: 500, target: target(ctx, "threshold"), note: "500 m a touch quicker than race pace" });
+        }
+        title = `Compromised run: short and sharp × ${n}`;
+        rationale = "Shorter station blocks and 500 m runs mean more transitions. Getting from station to running pace fast is free time on race day.";
+      } else {
+        for (const st of pickStations(env.stationCursor, rounds)) {
+          steps.push(stationStep(env, st, fraction, "race_specific"));
+          steps.push(raceKm(ctx, "Run straight off the station at HYROX race effort"));
+        }
+        title = `Compromised run: ${rounds} rounds`;
+        rationale = "This is the defining HYROX skill. Each round is a station followed immediately by a 1 km run at race effort.";
       }
       steps.push(runStep(ctx, "cooldown", 1000, "easy"));
       return finalize(env, {
         id: wid(opts.planId, date, "compromised_run"), date, sport: "hyrox", type: "compromised_run",
-        title: `Compromised run: ${rounds} rounds`,
+        title,
         objective: "Practise running well on legs that are already fatigued from a station.",
-        rationale: "This is the defining HYROX skill. Each round is a station followed immediately by a 1 km run at race effort.",
+        rationale,
         steps,
         scaling: { easier: "Drop a round, or walk 1 minute after the station before running.", harder: "Hold run pace; don't add rounds." },
         substitutions: ["Station options are listed on each block"],
@@ -559,18 +635,44 @@ function buildSession(slot: Slot, date: IsoDate, env: SessionEnv): PlannedWorkou
     }
     case "station_endurance": {
       const stations = pickStations(env.stationCursor + 4, 4);
+      const frac = lvl.stationVolumeFraction / 2;
       const steps: WorkoutStep[] = [timeStep(ctx, "warmup", 600, "easy", { note: "Erg or easy jog, then mobility" })];
-      for (const st of stations) {
-        const s = stationStep(env, st, lvl.stationVolumeFraction / 2, "race_specific");
-        steps.push({ ...s, repeat: 3, recoveryBetween: { durationSeconds: 90, target: { zone: "recovery", rpe: { min: 1, max: 2 } } } });
+      const format = variant(env, 3);
+      let title: string;
+      let rationale: string;
+      let easier: string;
+      if (format === 1) {
+        for (let round = 0; round < 3; round++) {
+          for (const st of stations) steps.push(stationStep(env, st, frac, "race_specific"));
+          if (round < 2) steps.push(timeStep(ctx, "recovery", 150, "recovery", { note: "Rest between rounds" }));
+        }
+        title = "Station circuit: 3 rounds";
+        rationale = "Moving from one station to the next without rest trains the transitions and the accumulated fatigue of race day, at a sustainable effort.";
+        easier = "Two rounds.";
+      } else if (format === 2) {
+        for (const st of stations) {
+          const s = stationStep(env, st, frac, "race_specific");
+          steps.push({ ...s, repeat: 2, recoveryBetween: REST(Math.max(30, 180 - (s.durationSeconds ?? 0)), "Start a block every 3 minutes; rest the remainder") });
+        }
+        title = "Station intervals: every 3 minutes";
+        rationale = "A fixed clock rewards efficient technique: the faster and smoother the station, the more rest you earn.";
+        easier = "Start a block every 3½ minutes.";
+      } else {
+        for (const st of stations) {
+          const s = stationStep(env, st, frac, "race_specific");
+          steps.push({ ...s, repeat: 3, recoveryBetween: REST(90) });
+        }
+        title = "Station endurance: sets";
+        rationale = "Stations are half the race. Practising them at race weight in controlled sets makes them cheaper on race day.";
+        easier = "Two sets per station.";
       }
       return finalize(env, {
         id: wid(opts.planId, date, "station_endurance"), date, sport: "hyrox", type: "station_endurance",
-        title: "Station endurance",
+        title,
         objective: "Build efficient technique and capacity on the stations at race load.",
-        rationale: "Stations are half the race. Practising them at race weight in controlled sets makes them cheaper on race day.",
+        rationale,
         steps,
-        scaling: { easier: "Two sets per station.", harder: "Shorten rest to 60 s." },
+        scaling: { easier, harder: "Shorten rest, keep technique clean." },
         substitutions: ["Station options are listed on each block"],
       });
     }
@@ -612,14 +714,19 @@ function pickStations(cursor: number, n: number): HyroxStation[] {
   return Array.from({ length: n }, (_, k) => STATION_ORDER[(cursor + k) % STATION_ORDER.length]!);
 }
 
-function easyRunHyrox(ctx: BuildContext, planId: string, date: IsoDate, meters: number): PlannedWorkout {
-  const steps = [runStep(ctx, "steady", Math.max(3000, meters), "easy")];
+function easyRunHyrox(ctx: BuildContext, planId: string, date: IsoDate, meters: number, strides = false): PlannedWorkout {
+  const steps: WorkoutStep[] = [runStep(ctx, "steady", Math.max(3000, meters), "easy")];
+  if (strides) {
+    steps.push({ kind: "work", durationSeconds: 20, repeat: 6, target: { zone: "repetition", rpe: { min: 7, max: 8 } }, recoveryBetween: { durationSeconds: 60, target: { zone: "recovery", rpe: { min: 1, max: 2 } }, note: "Walk back" }, note: "Strides: fast and relaxed, not a sprint" });
+  }
   const seconds = steps.reduce((s, st) => s + stepSeconds(ctx, st), 0);
   return {
     id: wid(planId, date, "easy_run"), date, sport: "run", type: "easy_run",
-    title: "Easy run",
-    objective: "Aerobic base at conversational effort.",
-    rationale: "Most running should be easy. It builds the engine for 8 km of race running and keeps you fresh for key sessions.",
+    title: strides ? "Easy run + strides" : "Easy run",
+    objective: strides ? "Aerobic base, then a few quick strides to keep your legs sharp." : "Aerobic base at conversational effort.",
+    rationale: strides
+      ? "Strides are short, relaxed accelerations. They improve running form and leg speed at almost no fatigue cost."
+      : "Most running should be easy. It builds the engine for 8 km of race running and keeps you fresh for key sessions.",
     steps,
     estimatedMinutes: Math.round(seconds / 60),
     plannedDistanceMeters: Math.round(steps.reduce((m, st) => m + stepMeters(ctx, st), 0)),
@@ -630,35 +737,22 @@ function easyRunHyrox(ctx: BuildContext, planId: string, date: IsoDate, meters: 
 }
 
 function strengthSession(env: SessionEnv, date: IsoDate): PlannedWorkout {
-  const have = new Set(env.athlete.equipment);
-  // Strength days use the coach's strength-support options, never the conditioning stations.
-  const support = (st: HyroxStation): string | null => {
-    const { recommended, alternatives } = resolveStation(st, have, "strength", env.athlete.exclusions);
-    return [recommended, ...alternatives].find((o) => o?.kind === "support")?.name ?? null;
-  };
-  const avoid = env.athlete.exclusions;
-  const hinge = avoid.includes("heavy_hinging")
-    ? "Glute bridges"
-    : have.has("barbell_rack") || have.has("dumbbells") ? "Romanian deadlifts" : have.has("kettlebells") ? "Kettlebell deadlifts" : "Single-leg hip hinges";
-  const items = [
-    support("sled_push") ?? (avoid.includes("deep_knee_bends") ? "Hamstring bridges" : "Bodyweight split squats"),
-    hinge,
-    support("sled_pull") ?? "Band rows",
-    support("skierg") ?? "Band pulldowns",
-    "Core: dead bugs and side planks",
-  ];
-  const unique = [...new Set(items)].filter((x) => !env.athlete.exclusions.some((e) => x.toLowerCase().includes(e.toLowerCase())));
+  // A and B alternate: a second strength day in the same week is always the other one.
+  const day = (env.week + env.occurrence) % 2 === 0 ? "A" : "B";
+  const items = strengthItems({ day, week: env.week, phase: env.phase, equipment: env.athlete.equipment, avoid: env.athlete.exclusions });
   const minutes = env.phase === "taper" ? 25 : 45;
+  const each = Math.round(((minutes - 5) * 60) / Math.max(1, items.length));
+  const taper = env.phase === "taper";
   return finalize(env, {
     id: wid(env.opts.planId, date, "strength"), date, sport: "strength", type: "strength",
-    title: env.phase === "taper" ? "Strength maintenance" : "HYROX strength",
-    objective: "Build the strength behind the sleds, lunges and carries.",
-    rationale: "Heavy, controlled strength work makes station loads feel lighter and protects you from injury.",
+    title: `${taper ? "Strength maintenance" : "Strength"} ${day}: ${day === "A" ? "legs & push" : "hinge & pull"}`,
+    objective: day === "A" ? "Build the leg drive behind the sled push, lunges and wall balls." : "Build the posterior chain and grip behind the sled pull, SkiErg and carries.",
+    rationale: "Heavy, controlled strength work makes station loads feel lighter and protects you from injury. Exercises change every three weeks: long enough to add load, often enough to keep it fresh.",
     steps: [
       timeStep(env.ctx, "warmup", 300, "easy", { note: "Mobility and activation" }),
-      { kind: "steady", durationSeconds: (minutes - 5) * 60, target: STRENGTH_TARGET, note: `${unique.join("; ")}. 3–4 sets, leave 2 reps in reserve.` },
+      ...items.map((it): WorkoutStep => ({ kind: "work", durationSeconds: each, target: STRENGTH_TARGET, exercise: it, note: `${it.name}: ${it.prescription}` })),
     ],
-    scaling: { easier: "Two sets per exercise.", harder: "Add load when all sets feel ≤ RPE 7." },
+    scaling: { easier: "One fewer set per exercise.", harder: "Add load when every set feels ≤ RPE 7. Leave 2 reps in reserve." },
     substitutions: [],
   });
 }
