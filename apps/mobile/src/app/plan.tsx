@@ -9,6 +9,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { generateHyroxPlan, HyroxPlanError, type PlannedWorkout, type PlanWeek, type TrainingPlan, type WorkoutStep } from "@adaptive-athlete/engine";
 import { Button, Callout, Heading, Screen, Wordmark } from "@/components/ui";
 import { dashboardStats } from "@/lib/dashboard";
+import { useDismissedNotes } from "@/lib/dismissed";
 import { distance, minutes, paceRange, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
 import { color, font, radius, space, type } from "@/lib/theme";
@@ -92,7 +93,8 @@ function Stat({ label, value, unit, sub, small = false }: { label: string; value
 }
 
 export default function PlanScreen() {
-  const { answers } = useSession();
+  const { answers, account } = useSession();
+  const { dismissed, dismiss } = useDismissedNotes(account?.userId);
   const today = localToday();
   const result = useMemo((): { plan: TrainingPlan } | { error: string } => {
     try {
@@ -127,9 +129,11 @@ export default function PlanScreen() {
         </Pressable>
       </View>
       <Dashboard plan={plan} answers={answers} today={today} />
-      {plan.basis.notes.map((n) => (
-        <Callout key={n}>{n}</Callout>
-      ))}
+      {dismissed
+        ? plan.basis.notes.filter((n) => !dismissed.has(n)).map((n) => (
+            <Callout key={n} onDismiss={() => dismiss(n)}>{n}</Callout>
+          ))
+        : null}
 
       <View style={nav.toggle} accessibilityRole="tablist">
         {(["weeks", "calendar"] as const).map((v) => (

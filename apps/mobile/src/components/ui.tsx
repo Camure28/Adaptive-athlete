@@ -211,10 +211,16 @@ export function Button({ title, onPress, kind = "primary", busy = false }: { tit
   );
 }
 
-export function Callout({ children, tone = "note" }: { children: ReactNode; tone?: "note" | "safety" }) {
+/** A highlighted note. With `onDismiss` it gets a close button (safety notes should never be dismissible). */
+export function Callout({ children, tone = "note", onDismiss }: { children: ReactNode; tone?: "note" | "safety"; onDismiss?: () => void }) {
   return (
-    <View style={[s.callout, tone === "safety" && { backgroundColor: color.safetySoft, borderLeftColor: color.safety }]}>
-      <Text style={[type.small, { color: color.text }]}>{children}</Text>
+    <View style={[s.callout, tone === "safety" && { backgroundColor: color.safetySoft, borderLeftColor: color.safety }, onDismiss && { flexDirection: "row", gap: space.sm }]}>
+      <Text style={[type.small, { color: color.text }, onDismiss && { flex: 1 }]}>{children}</Text>
+      {onDismiss ? (
+        <Pressable onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Dismiss" hitSlop={12} style={s.dismiss}>
+          <Text style={s.dismissText}>×</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -259,5 +265,7 @@ const s = StyleSheet.create({
   btnText: { fontFamily: font.title, fontSize: 19, letterSpacing: 1.6, textTransform: "uppercase", color: color.onAccent },
   btnQuietText: { fontFamily: font.semibold, fontSize: 15, letterSpacing: 0.4, color: color.accent },
   btnQuiet: { minHeight: 44, alignItems: "center", justifyContent: "center" },
+  dismiss: { width: 24, height: 24, alignItems: "center", justifyContent: "center", marginTop: -2 },
+  dismissText: { fontFamily: font.regular, fontSize: 22, lineHeight: 24, color: color.muted },
   callout: { backgroundColor: color.panel, padding: space.md, borderRadius: radius.row, marginBottom: space.lg, borderLeftWidth: 3, borderLeftColor: color.accent },
 });
