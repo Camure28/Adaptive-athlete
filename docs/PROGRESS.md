@@ -9,8 +9,8 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 ## 2026-10-16 — Claude Code on Cameron's Mac (review loop fix)
 - **Bug (found by Cameron on the phone):** after logging, the review screen called `adapt-plan` about 3 times a second (session helpers changed identity on every render and the screen's effect depended on them), so it looked stuck and stored 261 duplicate "no change" reviews. Fixed in the app (`d1499b8`): stable helpers, one run per visit.
 - **Safeguard:** `adapt-plan` returns the latest review when nothing has changed since (`reviewStillCurrent`, tested), so a bug in the app can't flood the history again. Needs `pnpm functions:deploy` (Cameron).
-- **Cleanup:** the duplicate reviews on Cameron's account are to be deleted by Cameron (Claude Code's safety check blocks deletes on the live database); the real review (version 2) stays.
-- **Open:** phone test of answering the follow-up question after the fix.
+- **Cleanup (done):** Cameron deleted the duplicate reviews (Claude Code's safety check blocks deletes on the live database); left: 1 review, 2 plan versions, 1 log, 1 answer. Safeguard deployed (`adapt-plan` v2).
+- **Verified by Cameron on the phone:** log with pain → plan adapted to version 2 → follow-up question → answered "improving" → one re-run, question cleared.
 
 ## 2026-10-16 — Claude Code on Cameron's Mac (adaptation on the server)
 - **Done:** after a log, the review screen runs the new `adapt-plan` Edge Function (D-026): it reads plan, logs, answers, recovery and results from the database, runs `adaptPlan`, and saves through `record_adaptation` (server only): a new `adapted` version plus decisions when anything changed, and a review every run. The app shows the review (checked, changed, kept, waiting on data, questions with tap answers); answering re-runs adaptation. Migration `20261016000008_adaptation_runs.sql` live (`athlete_answers`, `plan_reviews`); both functions deployed by Cameron.
