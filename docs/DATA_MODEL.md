@@ -19,7 +19,7 @@ Security rules and tests: see `docs/SECURITY.md`.
 | | `plan_versions` | server | Immutable snapshot per change: engine version, fitness basis, reason, start date, weeks, exact engine inputs |
 | | `planned_workouts` | server | Sessions per version, with their order within a day (`position`); `workout_key` links a session across versions |
 | | `adaptation_decisions` | server | Every decision, applied or suppressed: rule + version, what changed, why, next steps, evidence, before/after |
-| Training log | `completed_workouts` | athlete / importer | Status, duration, distance, HR, RPE, soreness, fatigue, pain, splits, station results, source |
+| Training log | `completed_workouts` | athlete / importer | Status, duration, distance, HR, RPE (0–10), soreness and fatigue (1–5), pain (0–10, body area, sharp, stopped the session, altered movement), splits, station results, source; for imports: start/end time, origin app, device, elevation, energy. One log per planned session |
 | | `daily_recovery` | athlete / importer | HRV, resting HR, sleep — keyed by source so device baselines never mix |
 | Integrations | `provider_connections` | server | Provider, status, scopes, sync state (no secrets) |
 | | `provider_credentials` | server only | Encrypted OAuth tokens; invisible to clients |

@@ -357,6 +357,55 @@ select pg_temp.expect((select count(*) from public.plan_versions where plan_id =
 commit;
 
 -- ---------------------------------------------------------------------------------------------
+-- Workout logging (D-024): one log per planned session, 1–5 fatigue and soreness, import columns
+-- ---------------------------------------------------------------------------------------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
+insert into public.completed_workouts (athlete_id, plan_id, workout_key, workout_date, sport, status, rpe, pain_level, fatigue, soreness)
+values ('a0000000-0000-0000-0000-00000000000a', 'a2000000-0000-0000-0000-00000000000a', '2026-10-27:threshold', '2026-10-27', 'run', 'completed', 7, 0, 5, 1);
+select pg_temp.expect((select count(*) from public.completed_workouts where workout_key = '2026-10-27:threshold') = 1,
+  'A can log a planned session of their own plan');
+do $$ begin
+  insert into public.completed_workouts (athlete_id, plan_id, workout_key, workout_date, sport, status)
+  values ('a0000000-0000-0000-0000-00000000000a', 'a2000000-0000-0000-0000-00000000000a', '2026-10-27:threshold', '2026-10-27', 'run', 'skipped');
+  raise exception 'FAILED: second log for one session';
+exception when unique_violation then raise notice 'ok - a planned session has at most one log (logging again edits it)';
+end $$;
+update public.completed_workouts set rpe = 8 where workout_key = '2026-10-27:threshold';
+select pg_temp.expect((select rpe from public.completed_workouts where workout_key = '2026-10-27:threshold') = 8, 'A can edit their own log');
+do $$ begin
+  insert into public.completed_workouts (athlete_id, workout_date, sport, status, fatigue) values ('a0000000-0000-0000-0000-00000000000a', '2026-10-28', 'run', 'completed', 6);
+  raise exception 'FAILED: fatigue 6 saved';
+exception when check_violation then raise notice 'ok - fatigue above 5 is rejected';
+end $$;
+do $$ begin
+  insert into public.completed_workouts (athlete_id, workout_date, sport, status, soreness) values ('a0000000-0000-0000-0000-00000000000a', '2026-10-28', 'run', 'completed', 0);
+  raise exception 'FAILED: soreness 0 saved';
+exception when check_violation then raise notice 'ok - soreness below 1 is rejected';
+end $$;
+insert into public.completed_workouts (athlete_id, workout_date, sport, status, source, external_id, started_at, ended_at, origin_app, device, elevation_gain_meters, active_energy_kcal)
+values ('a0000000-0000-0000-0000-00000000000a', '2026-10-28', 'run', 'completed', 'apple_health', 'HK-1', '2026-10-28T13:00:00Z', '2026-10-28T13:50:00Z', 'Garmin Connect', 'Forerunner 965', 42, 612);
+select pg_temp.expect((select origin_app from public.completed_workouts where external_id = 'HK-1') = 'Garmin Connect', 'import details (times, app, device, elevation, energy) are stored');
+insert into public.completed_workouts (athlete_id, workout_date, sport, status, rpe, pain_level, pain_location, pain_sharp, pain_stopped_session, pain_altered_movement)
+values ('a0000000-0000-0000-0000-00000000000a', '2026-10-29', 'run', 'partial', 6, 6, 'calf_shin', true, true, true);
+select pg_temp.expect((select pain_sharp and pain_stopped_session from public.completed_workouts where pain_location = 'calf_shin'), 'pain details for rule S-2 (sharp, stopped the session) are stored');
+do $$ begin
+  insert into public.completed_workouts (athlete_id, workout_date, sport, status, started_at, ended_at)
+  values ('a0000000-0000-0000-0000-00000000000a', '2026-10-28', 'run', 'completed', '2026-10-28T14:00:00Z', '2026-10-28T13:00:00Z');
+  raise exception 'FAILED: end before start saved';
+exception when check_violation then raise notice 'ok - a workout can''t end before it starts';
+end $$;
+commit;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
+select pg_temp.expect(not exists (select 1 from public.completed_workouts where workout_key = '2026-10-27:threshold'),
+  'B cannot see A''s session logs');
+commit;
+
+-- ---------------------------------------------------------------------------------------------
 -- Account deletion removes everything for that athlete and nothing else
 -- ---------------------------------------------------------------------------------------------
 delete from auth.users where id = 'bbbbbbbb-0000-0000-0000-000000000002';

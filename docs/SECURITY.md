@@ -15,7 +15,7 @@ Enforced by the database (row-level security), not just the app:
 - It saves through `record_plan_version`, which only the service role can execute. The function checks that the goal belongs to the athlete and that new sessions don't start before the version's start date. Athletes and signed-out visitors can't call it (tested).
 - The secret key it uses is injected by Supabase into Edge Functions (`SUPABASE_SECRET_KEYS`). It is never in the app, the repo or chat.
 
-Proof: `supabase/tests/rls_test.sql` (57 checks), run with `pnpm db:test`. The suite was verified to fail when a rule is deliberately broken.
+Proof: `supabase/tests/rls_test.sql` (66 checks), run with `pnpm db:test`. The suite was verified to fail when a rule is deliberately broken.
 
 ## Privacy
 - Data minimisation: limitations are "movements to avoid", not diagnoses; division instead of sex.

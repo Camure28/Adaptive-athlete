@@ -7,7 +7,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EMPTY_ANSWERS, toSavePayload, type Division, type OnboardingAnswers } from "@/onboarding/model";
-import { planFromRecord, type Equipment, type GymType, type HyroxGoal, type HyroxLevel, type Limitation, type TrainingStatus, type WeekRecord, type Weekday, type WorkoutRow } from "@adaptive-athlete/engine";
+import { fromLogRow, fromManualLog, planFromRecord, toLogRow, type CompletedWorkout, type Equipment, type GymType, type HyroxGoal, type HyroxLevel, type Limitation, type LogRow, type ManualLog, type TrainingStatus, type WeekRecord, type Weekday, type WorkoutRow } from "@adaptive-athlete/engine";
 import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan } from "./backend";
 
 export class SupabaseBackend implements Backend {
@@ -121,6 +121,24 @@ export class SupabaseBackend implements Backend {
         workouts: rows.data as WorkoutRow[],
       }),
     };
+  }
+
+  async listLogs(planId: string): Promise<CompletedWorkout[]> {
+    const { data, error } = await this.db.from("completed_workouts").select("*").eq("plan_id", planId);
+    if (error) throw new BackendError("Your logged sessions couldn't be loaded. Check your connection and try again.");
+    return (data as (LogRow & { id: string })[]).map(fromLogRow);
+  }
+
+  async saveLog(log: ManualLog, existingId: string | null): Promise<CompletedWorkout> {
+    const failed = new BackendError("Your log couldn't be saved. Check your connection and try again.");
+    const athlete = await this.db.from("athletes").select("id").single();
+    if (athlete.error) throw failed;
+    const row = toLogRow(fromManualLog(log, existingId ?? ""), athlete.data.id);
+    const saved = existingId
+      ? await this.db.from("completed_workouts").update(row).eq("id", existingId).select("*").single()
+      : await this.db.from("completed_workouts").insert(row).select("*").single();
+    if (saved.error) throw failed;
+    return fromLogRow(saved.data as LogRow & { id: string });
   }
 
   async loadOnboarding(): Promise<OnboardingAnswers | null> {

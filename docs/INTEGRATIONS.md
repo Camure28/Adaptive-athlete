@@ -56,7 +56,7 @@ Each entry records what the source allows, verified against its own published te
 6. `athleteFollowUp` asks for effort (RPE) and pain, which a watch can't measure. It also asks "was this the whole session?" when the recording is well short of the plan.
 
 **Still to build** (Claude Code, step 6 onward):
-- Database columns for imports (`started_at`, `ended_at`, `origin_app`, `device`, `elevation_gain_meters`, `active_energy_kcal`) in a new migration.
+- ~~Database columns for imports~~: done in `20261016000007_workout_logging.sql` (D-025). Store imports with `toLogRow(completed, athleteId, activity)` (`packages/engine/src/store/logs.ts`), which fills these columns; manual logs use the same function without the activity.
 - A server-side import function that runs these steps and writes the log.
 - Once the Apple Developer Program is active: the HealthKit library, the capability and a permission screen, and background delivery so new workouts arrive without opening the app.
 

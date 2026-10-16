@@ -1,5 +1,5 @@
 /** Demo mode: in-memory only. Never used when a Supabase project is configured. */
-import { generateHyroxPlan, HyroxPlanError } from "@adaptive-athlete/engine";
+import { fromManualLog, generateHyroxPlan, HyroxPlanError, type CompletedWorkout, type ManualLog } from "@adaptive-athlete/engine";
 import { toEngineInputs, type OnboardingAnswers } from "@/onboarding/model";
 import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan } from "./backend";
 
@@ -15,6 +15,7 @@ export class DemoBackend implements Backend {
   private account: Account | null = null;
   private answers: OnboardingAnswers | null = null;
   private plan: SavedPlan | null = null;
+  private logs = new Map<string, CompletedWorkout>();
 
   async currentAccount() {
     return this.account;
@@ -32,6 +33,7 @@ export class DemoBackend implements Backend {
     this.account = null;
     this.answers = null;
     this.plan = null;
+    this.logs.clear();
   }
   async saveOnboarding(answers: OnboardingAnswers) {
     if (!this.account) throw new BackendError("Sign in to save your answers.");
@@ -52,6 +54,14 @@ export class DemoBackend implements Backend {
   }
   async loadPlan() {
     return this.plan;
+  }
+  async listLogs(planId: string) {
+    return [...this.logs.values()].filter((l) => l.plannedWorkoutId?.startsWith(`${planId}:`));
+  }
+  async saveLog(log: ManualLog, existingId: string | null) {
+    const saved = fromManualLog(log, existingId ?? `demo-log-${this.logs.size + 1}`);
+    this.logs.set(saved.id, saved);
+    return saved;
   }
   async listEvents(today: string) {
     return DEMO_EVENTS.filter((e) => e.endDate >= today);

@@ -4,7 +4,7 @@
  * - DemoBackend: in-memory, nothing leaves the device or survives a reload. Used only when no
  *   Supabase project is configured; the UI shows a permanent "Demo mode" banner.
  */
-import type { TrainingPlan } from "@adaptive-athlete/engine";
+import type { CompletedWorkout, ManualLog, TrainingPlan } from "@adaptive-athlete/engine";
 import type { OnboardingAnswers } from "@/onboarding/model";
 
 export interface Account {
@@ -48,6 +48,10 @@ export interface Backend {
   buildPlan(today: string): Promise<void>;
   /** The current saved plan version, or null if none has been built yet. */
   loadPlan(): Promise<SavedPlan | null>;
+  /** Logged sessions for a plan (any version: logs follow workout_key across versions). */
+  listLogs(planId: string): Promise<CompletedWorkout[]>;
+  /** Saves a manual log (D-025); pass the existing log's id to edit it. Returns what was stored. */
+  saveLog(log: ManualLog, existingId: string | null): Promise<CompletedWorkout>;
   /** Races that haven't finished yet, soonest first. */
   listEvents(today: string): Promise<HyroxEvent[]>;
   /** Everything stored about this athlete, as formatted JSON (data export, SECURITY.md). */

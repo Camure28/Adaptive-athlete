@@ -20,3 +20,4 @@ export * from "./imports/dedupe.js";
 export * from "./imports/match.js";
 export { ENGINE_VERSION, planToRecord, planFromRecord, PlanRecordError, type PlanRecord, type StoredVersion, type WeekRecord, type WorkoutRow } from "./store/record.js";
 export { inputsFromProfile, type StoredProfile } from "./store/inputs.js";
+export { LOG_BODY_AREAS, PAIN_GROUP, LOG_SCALES, validateManualLog, fromManualLog, toLogRow, fromLogRow, splitPlannedId, type LogBodyArea, type ManualLog, type LogErrors, type LogRow } from "./store/logs.js";

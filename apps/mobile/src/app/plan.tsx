@@ -5,7 +5,7 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { PlannedWorkout, PlanWeek, TrainingPlan, WorkoutStep } from "@adaptive-athlete/engine";
+import type { CompletedWorkout, PlannedWorkout, PlanWeek, TrainingPlan, WorkoutStep } from "@adaptive-athlete/engine";
 import { TechLoader } from "@/components/loader";
 import { Button, Callout, Heading, Screen, Wordmark } from "@/components/ui";
 import { backend, type SavedPlan } from "@/data";
@@ -14,6 +14,7 @@ import { useDismissedNotes } from "@/lib/dismissed";
 import { distance, minutes, paceRange, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
 import { color, font, radius, space, type } from "@/lib/theme";
+import { logBadge } from "@/logging/form";
 import type { OnboardingAnswers, Units } from "@/onboarding/model";
 
 const PHASE: Record<PlanWeek["phase"], string> = { base: "Base", build: "Build", peak: "Peak", taper: "Taper" };
@@ -94,7 +95,7 @@ function Stat({ label, value, unit, sub, small = false }: { label: string; value
 }
 
 export default function PlanScreen() {
-  const { answers, account } = useSession();
+  const { answers, account, logs, setPlanAndLogs } = useSession();
   const { dismissed, dismiss } = useDismissedNotes(account?.userId);
   const today = localToday();
   const [result, setResult] = useState<SavedPlan | { error: string } | null>(null);
@@ -114,7 +115,14 @@ export default function PlanScreen() {
           await backend.buildPlan(today);
           saved = await backend.loadPlan();
         }
-        if (live) setResult(saved ?? { error: "Your plan couldn't be loaded. Try again in a moment." });
+        if (!saved) {
+          if (live) setResult({ error: "Your plan couldn't be loaded. Try again in a moment." });
+          return;
+        }
+        const logged = await backend.listLogs(saved.plan.id);
+        if (!live) return;
+        setPlanAndLogs(saved, logged);
+        setResult(saved);
       } catch (e) {
         if (live) setResult({ error: e instanceof Error ? e.message : "Your plan couldn't be loaded. Try again in a moment." });
       }
@@ -122,7 +130,7 @@ export default function PlanScreen() {
     return () => {
       live = false;
     };
-  }, [today, attempt]);
+  }, [today, attempt, setPlanAndLogs]);
 
   if (!result) return <TechLoader lines={["LOADING YOUR PLAN", "GENERATING TRAINING PLAN"]} stage={stage} />;
 
@@ -171,9 +179,9 @@ export default function PlanScreen() {
 
       {view === "weeks"
         ? plan.weeks.map((w) => (
-            <Week key={w.index} week={w} open={openWeek === w.index} onToggle={() => setOpenWeek(openWeek === w.index ? -1 : w.index)} units={answers.units} />
+            <Week key={w.index} week={w} open={openWeek === w.index} onToggle={() => setOpenWeek(openWeek === w.index ? -1 : w.index)} units={answers.units} logs={logs} today={today} />
           ))
-        : <Calendar plan={plan} today={today} units={answers.units} />}
+        : <Calendar plan={plan} today={today} units={answers.units} logs={logs} />}
 
       <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>{backend.mode === "demo" ? "Demo mode: built on your phone, not saved." : `Plan version ${result.version} · saved ${shortDate(localToday(new Date(result.savedAt)))}. Logging and automatic adjustments come next.`}</Text>
     </Screen>
@@ -186,7 +194,7 @@ const MONTH_NAME = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JUL
 const isoOf = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 /** Month grid, Monday first. Each day shows its sessions as marks; tap a day to see them. */
-function Calendar({ plan, today, units }: { plan: TrainingPlan; today: string; units: Units }) {
+function Calendar({ plan, today, units, logs }: { plan: TrainingPlan; today: string; units: Units; logs: Record<string, CompletedWorkout> }) {
   const all = useMemo(() => plan.weeks.flatMap((w) => w.workouts), [plan]);
   const byDate = useMemo(() => {
     const m = new Map<string, PlannedWorkout[]>();
@@ -253,7 +261,7 @@ function Calendar({ plan, today, units }: { plan: TrainingPlan; today: string; u
       </View>
 
       <Text style={[type.eyebrow, { marginTop: space.lg, marginBottom: space.xs }]}>{shortDate(selected)}</Text>
-      {dayList.length ? dayList.map((w) => <Session key={w.id} w={w} units={units} />) : <Text style={[type.small, { paddingVertical: space.md }]}>Rest day. Nothing planned.</Text>}
+      {dayList.length ? dayList.map((w) => <Session key={w.id} w={w} units={units} log={logs[w.id]} today={today} />) : <Text style={[type.small, { paddingVertical: space.md }]}>Rest day. Nothing planned.</Text>}
     </View>
   );
 }
@@ -303,7 +311,7 @@ const cal = StyleSheet.create({
   legend: { flexDirection: "row", flexWrap: "wrap", gap: space.md, marginTop: space.sm },
 });
 
-function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; onToggle: () => void; units: Units }) {
+function Week({ week, open, onToggle, units, logs, today }: { week: PlanWeek; open: boolean; onToggle: () => void; units: Units; logs: Record<string, CompletedWorkout>; today: string }) {
   const run = week.workouts.reduce((m, w) => m + (w.sport === "run" || w.sport === "hyrox" ? w.plannedDistanceMeters ?? 0 : 0), 0);
   const mins = week.workouts.reduce((m, w) => m + w.estimatedMinutes, 0);
   return (
@@ -324,7 +332,7 @@ function Week({ week, open, onToggle, units }: { week: PlanWeek; open: boolean; 
       {open ? (
         <View style={{ paddingHorizontal: space.lg, paddingBottom: space.sm }}>
           {week.workouts.map((w) => (
-            <Session key={w.id} w={w} units={units} />
+            <Session key={w.id} w={w} units={units} log={logs[w.id]} today={today} />
           ))}
         </View>
       ) : null}
@@ -340,7 +348,7 @@ const TAG: Partial<Record<PlannedWorkout["sport"], { label: string; bg: string; 
   strength: { label: "Strength", bg: color.accentSoft, fg: color.accent },
 };
 
-function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
+function Session({ w, units, log, today }: { w: PlannedWorkout; units: Units; log?: CompletedWorkout; today?: string }) {
   const [open, setOpen] = useState(false);
   const key = w.type === "race" || w.type.endsWith("simulation");
   const tag = TAG[w.sport] ?? RUN_TAG;
@@ -355,6 +363,7 @@ function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
               <Text style={[type.eyebrow, { fontSize: 10, lineHeight: 14, color: tag.fg }]}>{tag.label}</Text>
             </View>
             <Text style={[type.small, type.figure]}>{minutes(w.estimatedMinutes)}</Text>
+            {log ? <Text style={[type.eyebrow, { fontSize: 10, lineHeight: 14, color: log.status === "skipped" ? color.muted : color.accent }]}>{logBadge(log)}</Text> : null}
           </View>
         </View>
         <Text style={[type.title, { color: color.muted }]}>{open ? "−" : "+"}</Text>
@@ -378,6 +387,9 @@ function Session({ w, units }: { w: PlannedWorkout; units: Units }) {
             <Text style={[type.eyebrow, { marginBottom: 4 }]}>Make it easier</Text>
             <Text style={type.explain}>{w.scaling.easier}</Text>
           </View>
+          {today && w.date <= today ? (
+            <Button kind={log ? "quiet" : "primary"} title={log ? "Edit log" : "Log session"} onPress={() => router.push({ pathname: "/log", params: { id: w.id } })} />
+          ) : null}
         </View>
       ) : null}
     </View>

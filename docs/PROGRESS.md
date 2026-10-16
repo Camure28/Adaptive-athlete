@@ -6,6 +6,11 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — Claude Code on Cameron's Mac (step 6: manual workout logging)
+- **Done:** athletes log planned sessions from the plan (D-025): done / partly / skipped, time, distance for runs, RPE 0–10, pain (level, body area, sharp, stopped the session, altered movement), fatigue and soreness 1–5, note. Logs are saved in the import pipeline's shape (`toLogRow`/`fromLogRow`, `packages/engine/src/store/logs.ts`), one per planned session by `plan_id` + `workout_key`. Migration `20261016000007_workout_logging.sql` is live: import columns from `INTEGRATIONS.md`, pain sharp / stopped, 1–5 fatigue and soreness, one log per session. Badges on the plan and calendar; "Log session" / "Edit log" on sessions up to today.
+- **Reconciled with the adaptation commit:** both sessions picked D-024; the adaptation decision keeps it and logging is D-025. The athlete's 10 body areas (`LOG_BODY_AREAS`) map to the approved pain-map groups (`PAIN_GROUP`); thigh/hamstring and upper back/neck go to "other" until the coach sets movements (Cameron's choice). Tests: 231 engine, 28 app, 66 database checks.
+- **Open:** try logging on the phone. Next (in progress): run `adaptPlan` on the server after each log, save the adapted version and decisions, show the weekly review and questions.
+
 ## 2026-10-16 — claude.ai Project chat (step 7: adaptation engine)
 - **Done:** the adaptation engine now follows the approved rubric rule by rule (D-024). Built: S-1–S-3, F-1–F-6, A-1–A-5, P-1–P-3, T-1, T-2, Q-1, every §4 guardrail, and a weekly review object (`adaptPlan(...).review`). There are 33 adaptation tests (218 engine tests in total). Interpretations of the rubric wording for coach review are in `ADAPTATION_ENGINE.md` §11. Engine only: no app or database changes.
 - **Decided with Cameron (D-024):** pain area → movements map approved as drafted; fatigue and soreness logged as 1–5 taps (pain and RPE 0–10); load-spike rule kept as F-6.
