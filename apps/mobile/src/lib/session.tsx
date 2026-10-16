@@ -15,6 +15,9 @@ interface SessionState {
   logs: Record<string, CompletedWorkout>;
   setPlanAndLogs: (plan: SavedPlan | null, logs: CompletedWorkout[]) => void;
   putLog: (log: CompletedWorkout) => void;
+  /** Recently logged workouts, planned or not (Recent workouts screen). */
+  recent: CompletedWorkout[];
+  setRecent: (logs: CompletedWorkout[]) => void;
   /** The latest adaptation review (D-026). */
   review: SavedReview | null;
   setReview: (r: SavedReview | null) => void;
@@ -28,6 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<SavedPlan | null>(null);
   const [logs, setLogs] = useState<Record<string, CompletedWorkout>>({});
   const [review, setReview] = useState<SavedReview | null>(null);
+  const [recent, setRecent] = useState<CompletedWorkout[]>([]);
   const value = useMemo<SessionState>(
     () => ({
       account,
@@ -47,8 +51,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       review,
       setReview,
+      recent,
+      setRecent,
     }),
-    [account, answers, plan, logs, review],
+    [account, answers, plan, logs, review, recent],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

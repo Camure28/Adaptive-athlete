@@ -58,6 +58,8 @@ export interface Backend {
   loadPlan(): Promise<SavedPlan | null>;
   /** Logged sessions for a plan (any version: logs follow workout_key across versions). */
   listLogs(planId: string): Promise<CompletedWorkout[]>;
+  /** Every log from `since` (ISO date) on, planned or not, newest first. */
+  listRecentLogs(since: string): Promise<CompletedWorkout[]>;
   /** Saves a manual log (D-025); pass the existing log's id to edit it. Returns what was stored. */
   saveLog(log: ManualLog, existingId: string | null): Promise<CompletedWorkout>;
   /**

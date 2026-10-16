@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fromManualLog, type PlannedWorkout } from "@adaptive-athlete/engine";
-import { formFor, logBadge, otherWorkoutForm, toManualLog, type LogForm } from "../src/logging/form";
+import { formFor, formFromLog, logBadge, logSummary, logTitle, otherWorkoutForm, toManualLog, type LogForm } from "../src/logging/form";
 
 const run: PlannedWorkout = {
   id: "plan-1:2026-10-20:threshold", date: "2026-10-20", sport: "run", type: "threshold", title: "Threshold intervals",
@@ -96,6 +96,27 @@ describe("logging a workout that wasn't in the plan", () => {
     expect(toManualLog(other({ sport: "bike", distance: "12" }), null, "km", TODAY)).toMatchObject({ log: { distanceMeters: 12000 } });
     const r = toManualLog(other({ sport: "strength", distance: "3" }), null, "km", TODAY);
     expect("log" in r && r.log.distanceMeters).toBeUndefined();
+  });
+});
+
+describe("recent workouts", () => {
+  const TODAY = "2026-10-16";
+
+  it("reopen an unplanned workout as it was entered, and save it unchanged", () => {
+    const form: LogForm = { ...otherWorkoutForm(TODAY), date: "2026-10-14", sport: "bike", minutes: "60", distance: "20", rpe: 5, hurt: false, fatigue: 3, notes: "Commute" };
+    const r = toManualLog(form, null, "km", TODAY);
+    if (!("log" in r)) throw new Error("expected a log");
+    const saved = fromManualLog(r.log, "log-9");
+    expect(formFromLog(saved, "km")).toEqual(form);
+    expect(toManualLog(formFromLog(saved, "km"), null, "km", TODAY)).toEqual(r);
+  });
+
+  it("are titled by their planned session, or by kind when not in the plan", () => {
+    const c = fromManualLog({ date: TODAY, sport: "row", status: "completed", durationSeconds: 1800, distanceMeters: 6000, rpe: 6, pain: null }, "x");
+    expect(logTitle(c)).toBe("Row");
+    expect(logTitle(c, "Threshold intervals")).toBe("Threshold intervals");
+    expect(logSummary(c, "km")).toBe("30 min · 6 km");
+    expect(logSummary({ ...c, status: "skipped" }, "km")).toBe("");
   });
 });
 

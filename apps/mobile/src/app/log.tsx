@@ -1,7 +1,8 @@
 /**
  * Log a planned session (D-025): done / partly done / skipped, time, distance (runs), effort,
  * pain, fatigue and soreness, note. Opened from a session on the plan; saving again edits the log.
- * With `id=new` it logs a workout that wasn't in the plan: the athlete picks the day and the kind.
+ * With `id=new` it logs a workout that wasn't in the plan: the athlete picks the day and the kind;
+ * `log=<id>` edits one already saved (from Recent workouts).
  */
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -12,19 +13,21 @@ import { backend } from "@/data";
 import { minutes, shortDate } from "@/lib/format";
 import { localToday, useSession } from "@/lib/session";
 import { space } from "@/lib/theme";
-import { asksDistance, BODY_AREA_LABELS, formFor, OTHER_SPORTS, OTHER_WORKOUT_DAYS, otherWorkoutForm, toManualLog, type FormErrors, type LogForm } from "@/logging/form";
+import { asksDistance, BODY_AREA_LABELS, formFor, formFromLog, OTHER_SPORTS, OTHER_WORKOUT_DAYS, otherWorkoutForm, toManualLog, type FormErrors, type LogForm } from "@/logging/form";
 
 const range = (lo: number, hi: number) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
 const scale = (lo: number, hi: number) => range(lo, hi).map((n) => ({ value: n, label: String(n) }));
 
 export default function LogScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { plan, logs, putLog, answers } = useSession();
+  const { id, log: logId } = useLocalSearchParams<{ id: string; log?: string }>();
+  const { plan, logs, putLog, answers, recent } = useSession();
   const today = localToday();
   const other = id === "new";
   const workout = other ? null : plan?.plan.weeks.flatMap((w) => w.workouts).find((w) => w.id === id) ?? null;
-  const existing = id && !other ? logs[id] : undefined;
-  const [form, setForm] = useState<LogForm | null>(() => (other ? otherWorkoutForm(today) : workout ? formFor(workout, answers.units, existing) : null));
+  const existing = other ? recent.find((c) => c.id === logId) : id ? logs[id] : undefined;
+  const [form, setForm] = useState<LogForm | null>(() =>
+    other ? (existing ? formFromLog(existing, answers.units) : otherWorkoutForm(today)) : workout ? formFor(workout, answers.units, existing) : null,
+  );
   const [errors, setErrors] = useState<FormErrors>({});
   const [busy, setBusy] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -72,7 +75,7 @@ export default function LogScreen() {
       {workout ? (
         <Heading title={workout.title} detail={`${shortDate(workout.date)} · planned ${minutes(workout.estimatedMinutes)}`} />
       ) : (
-        <Heading title="Log other workout" detail="Training that wasn't in your plan still counts toward your week." />
+        <Heading title={existing ? "Edit workout" : "Log other workout"} detail="Training that wasn't in your plan still counts toward your week." />
       )}
       {saveError ? <Callout tone="safety">{saveError}</Callout> : null}
 

@@ -175,6 +175,7 @@ export default function PlanScreen() {
             onPress={() => router.push("/review")}
           />
         ) : null}
+        <Button kind="quiet" title="Recent workouts" onPress={() => router.push("/workouts")} />
         <Button kind="quiet" title="Log other workout" onPress={() => router.push({ pathname: "/log", params: { id: "new" } })} />
       </View>
       {dismissed

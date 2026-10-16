@@ -78,27 +78,33 @@ export function asksDistance(sport: Sport | null, planned: boolean): boolean {
 
 const fromMeters = (m: number, units: Units): string => String(Math.round((m / (units === "mi" ? METERS_PER_MILE : 1000)) * 100) / 100);
 
+/** The form for a stored log, as it was entered (planned or not). */
+export function formFromLog(existing: CompletedWorkout, units: Units): LogForm {
+  const hurt = existing.pain === undefined ? null : existing.pain.level > 0;
+  return {
+    status: existing.status,
+    date: existing.date,
+    sport: existing.sport,
+    minutes: existing.durationSeconds !== undefined ? String(Math.round(existing.durationSeconds / 60)) : "",
+    distance: existing.distanceMeters !== undefined ? fromMeters(existing.distanceMeters, units) : "",
+    rpe: existing.rpe ?? null,
+    hurt,
+    painLevel: hurt ? existing.pain!.level : null,
+    painArea: hurt ? ((existing.pain!.location as LogBodyArea | undefined) ?? null) : null,
+    painAltered: hurt ? (existing.pain!.alteredMovement ?? null) : null,
+    painSharp: hurt ? (existing.pain!.sharp ?? null) : null,
+    painStopped: hurt ? (existing.pain!.stoppedSession ?? null) : null,
+    fatigue: existing.fatigue ?? null,
+    soreness: existing.soreness ?? null,
+    notes: existing.notes ?? "",
+  };
+}
+
 /** A new form prefilled from the plan, or the stored log when editing. */
 export function formFor(w: PlannedWorkout, units: Units, existing?: CompletedWorkout): LogForm {
   if (existing) {
-    const hurt = existing.pain === undefined ? null : existing.pain.level > 0;
-    return {
-      status: existing.status,
-      date: w.date,
-      sport: w.sport,
-      minutes: existing.durationSeconds !== undefined ? String(Math.round(existing.durationSeconds / 60)) : String(w.estimatedMinutes),
-      distance: existing.distanceMeters !== undefined ? fromMeters(existing.distanceMeters, units) : "",
-      rpe: existing.rpe ?? null,
-      hurt,
-      painLevel: hurt ? existing.pain!.level : null,
-      painArea: hurt ? ((existing.pain!.location as LogBodyArea | undefined) ?? null) : null,
-      painAltered: hurt ? (existing.pain!.alteredMovement ?? null) : null,
-      painSharp: hurt ? (existing.pain!.sharp ?? null) : null,
-      painStopped: hurt ? (existing.pain!.stoppedSession ?? null) : null,
-      fatigue: existing.fatigue ?? null,
-      soreness: existing.soreness ?? null,
-      notes: existing.notes ?? "",
-    };
+    const f = formFromLog(existing, units);
+    return { ...f, date: w.date, sport: w.sport, minutes: f.minutes || String(w.estimatedMinutes) };
   }
   return {
     status: null,
@@ -184,6 +190,22 @@ export function toManualLog(f: LogForm, w: PlannedWorkout | null, units: Units, 
   }
   Object.assign(errors, validateManualLog(log));
   return Object.keys(errors).length > 0 ? { errors } : { log };
+}
+
+const SPORT_LABEL = Object.fromEntries(OTHER_SPORTS.map((o) => [o.value, o.label])) as Partial<Record<Sport, string>>;
+
+/** What to call a logged workout: the planned session's title, or its kind for other workouts. */
+export function logTitle(c: CompletedWorkout, plannedTitle?: string): string {
+  return plannedTitle ?? (c.sport === "trail_run" ? "Trail run" : (SPORT_LABEL[c.sport] ?? "Workout"));
+}
+
+/** Time and distance, e.g. "45 min · 5.2 mi"; empty for a skipped session. */
+export function logSummary(c: CompletedWorkout, units: Units): string {
+  if (c.status === "skipped") return "";
+  const parts: string[] = [];
+  if (c.durationSeconds !== undefined) parts.push(`${Math.round(c.durationSeconds / 60)} min`);
+  if (c.distanceMeters !== undefined) parts.push(`${fromMeters(c.distanceMeters, units)} ${units}`);
+  return parts.join(" · ");
 }
 
 /** Short summary for the plan list, e.g. "DONE · RPE 7". */

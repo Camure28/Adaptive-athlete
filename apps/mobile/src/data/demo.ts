@@ -72,6 +72,9 @@ export class DemoBackend implements Backend {
   async listLogs(planId: string) {
     return [...this.logs.values()].filter((l) => l.plannedWorkoutId?.startsWith(`${planId}:`));
   }
+  async listRecentLogs(since: string) {
+    return [...this.logs.values()].filter((l) => l.date >= since).sort((a, b) => b.date.localeCompare(a.date));
+  }
   async saveLog(log: ManualLog, existingId: string | null) {
     const saved = fromManualLog(log, existingId ?? `demo-log-${this.logs.size + 1}`);
     this.logs.set(saved.id, saved);

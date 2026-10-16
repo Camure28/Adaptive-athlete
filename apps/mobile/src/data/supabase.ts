@@ -160,6 +160,13 @@ export class SupabaseBackend implements Backend {
     return (data as (LogRow & { id: string })[]).map(fromLogRow);
   }
 
+  async listRecentLogs(since: string): Promise<CompletedWorkout[]> {
+    const { data, error } = await this.db.from("completed_workouts").select("*").gte("workout_date", since)
+      .order("workout_date", { ascending: false }).order("created_at", { ascending: false });
+    if (error) throw new BackendError("Your workouts couldn't be loaded. Check your connection and try again.");
+    return (data as (LogRow & { id: string })[]).map(fromLogRow);
+  }
+
   async saveLog(log: ManualLog, existingId: string | null): Promise<CompletedWorkout> {
     const failed = new BackendError("Your log couldn't be saved. Check your connection and try again.");
     const athlete = await this.db.from("athletes").select("id").single();
