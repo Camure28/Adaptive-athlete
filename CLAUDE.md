@@ -53,7 +53,7 @@ pnpm functions:deploy                      # rebuild the engine bundle, deploy g
 - Verified 2026-10-16: sign-up and onboarding save to Supabase from the iPhone.
 - Verified 2026-10-16: first plan built and saved by the generate-plan Edge Function, shown on the iPhone (D-022).
 - Live 2026-10-16: workout logging including workouts outside the plan (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
-- Built 2026-10-16: account deletion, privacy policy and feedback in Profile (D-031); deletion migration push pending.
-- Name and icon 2026-10-16: athletes see **Adapt** (D-032); code, repo and bundle ID keep "adaptive-athlete".
+- Built 2026-10-16: account deletion, privacy policy and feedback in Profile (D-031); live.
+- Name and icon 2026-10-16: athletes see **Adapt** (D-032); code, repo and bundle ID keep "adaptive-athlete". Verified on the phone 2026-10-16 (icon changes need `npx expo prebuild --platform ios --clean`).
 - Built 2026-10-16: plan start day at onboarding (D-033); migration push and functions deploy pending. Coach review page sent to Cameron (answers in the artifact's database, see PROGRESS).
 - Next (order in `docs/ROADMAP.md`): pilot readiness (coach review answers, TestFlight), then HYROX station tracking, Apple Health.

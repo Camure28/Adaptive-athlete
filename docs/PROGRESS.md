@@ -6,6 +6,11 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (phone check)
+- **Verified by Cameron on the phone:** the Adapt name and A icon show after `npx expo prebuild --platform ios --clean` and `npx expo run:ios --device` (delete the old app first; iOS caches icons). Note for later rebuilds: changing the icon or name in `app.json` needs a clean prebuild, because the generated `ios/` folder keeps the old ones.
+- **Live:** the leaderboard (`20261016000009`) and account deletion (`20261017000010`) migrations; the 2026-10-16 dry run listed only `20261017000011_plan_start_date.sql` as pending.
+- **Reminder:** `pnpm functions:deploy` runs from the repo root, not `apps/mobile`.
+
 ## 2026-10-16 — claude.ai Project chat (start day and coach review)
 - **Done (D-033):** onboarding's review step asks when to start (Today / Tomorrow / Next Monday). It's saved as `plan_start_date` (migration `20261017000011_plan_start_date.sql`, 3 database checks in `plan_start_test.sql`), sent to the engine on the phone and the server, and not asked again once the day has passed. This closes the daily review's "half-landed plan start date" issue.
 - **Coach review page:** a private artifact listing the 25 coaching defaults still awaiting Cameron's sign-off: session formats (D-016), strength, HYROX_WEEK engine assumptions, the 2-week base (D-018), the mid-week start, body areas and pain wording (D-025), answer options (D-026), and the A-2/A-3/P-7 details. Answers save to the page's database (collection `answers`, one document per item: verdict, note); Claude reads them with ArtifactData. Link: https://claude.ai/artifact/Tvb6KZuJKY3LxM2eHB9jRc
