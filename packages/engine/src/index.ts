@@ -22,3 +22,4 @@ export { ENGINE_VERSION, planToRecord, planFromRecord, PlanRecordError, type Pla
 export { inputsFromProfile, type StoredProfile } from "./store/inputs.js";
 export { LOG_BODY_AREAS, PAIN_GROUP, LOG_SCALES, validateManualLog, fromManualLog, toLogRow, fromLogRow, splitPlannedId, type LogBodyArea, type ManualLog, type LogErrors, type LogRow } from "./store/logs.js";
 export { ADAPTATION_LOOKBACK_DAYS, PAIN_IMPROVED_ANSWERS, QUESTION_QUIET_DAYS, adaptationInputFromRows, decisionRows, reviewForStorage, reviewStillCurrent, type AdaptationRows, type DecisionRow, type StoredReview } from "./store/adaptation.js";
+export * from "./hyrox/session-equipment.js";

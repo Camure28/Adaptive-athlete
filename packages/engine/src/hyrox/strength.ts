@@ -110,3 +110,9 @@ export function strengthItemAvoided(name: string, avoid: readonly string[]): boo
   if (own) return (own.avoidIf ?? []).some((a) => avoid.includes(a));
   return optionAvoidedByName(name, avoid);
 }
+
+/** Equipment a strength item can use (any one of these), [] for bodyweight or band; null if unknown. */
+export function strengthItemEquipment(name: string): Equipment[] | null {
+  const own = ALL_EXERCISES.find((x) => x.name === name);
+  return own ? [...(own.anyOf ?? [])] : null;
+}

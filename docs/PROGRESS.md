@@ -6,6 +6,14 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (workout breakdown)
+- **Done (D-030):** session details now show an Equipment row (icon tiles), numbered blocks (Warm-up / Main set / Cool-down) and one row per movement: round equipment icon, name, exact dose, rest, and alternatives. This applies everywhere a session opens: Home ("See the workout"), Training and the calendar.
+  - **Icons:** 18 original equipment line icons, drawn and rendered for this app (`assets/equipment/*.png`; source script not kept in the repo; redraw with any SVG tool).
+  - **Engine:** `sessionEquipment` / `stepGear` with 4 tests.
+  - **Types:** `src/types/assets.d.ts` declares PNG imports, because `expo-env.d.ts` is git-ignored.
+  - **Install:** app only; reload, no new packages.
+- **Open:** movement photos or clips (suggested: shoot at Cameron's gym) to replace the icons in movement rows.
+
 ## 2026-10-16 — claude.ai Project chat (leaderboard)
 - **Done (D-029):**
   - **Screen:** a Leaderboard tab between Training and Profile. It has an opt-in screen with a nickname and a plain list of what others see and never see; gym / worldwide and this week / 4 weeks switches; your row highlighted; join a gym by code or create one (coach); and settings to rename, share the gym code, leave the gym or leave the leaderboard.

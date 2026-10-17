@@ -3,9 +3,11 @@
  * countdown, stat tiles, week cards, session rows with their steps, and the month calendar.
  */
 import { router } from "expo-router";
-import { useMemo, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { CompletedWorkout, PlannedWorkout, PlanWeek, TrainingPlan, WorkoutStep } from "@adaptive-athlete/engine";
+import { useMemo, useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { GEAR_ICON } from "@/components/gear";
+import { sessionEquipment, stepGear, type CompletedWorkout, type Equipment, type MovementGear, type PlannedWorkout, type PlanWeek, type TrainingPlan, type WorkoutStep } from "@adaptive-athlete/engine";
+import { useSession } from "@/lib/session";
 import { Button, Callout, Dot, Ring } from "@/components/ui";
 import { dashboardStats } from "@/lib/dashboard";
 import { distance, minutes, paceRange } from "@/lib/format";
@@ -286,82 +288,144 @@ export function Session({ w, units, log, today, defaultOpen = false, hideLogButt
 }
 
 /** What a session asks for: the objective, the work step by step, why, and how to make it easier. */
+/** What a session asks for: the equipment, the work in numbered blocks, why, and how to make it easier. */
 export function SessionDetails({ w, units, showObjective = true }: { w: PlannedWorkout; units: Units; showObjective?: boolean }) {
+  const { answers } = useSession();
+  const have = new Set<Equipment>(answers.equipment);
+  const gear = sessionEquipment(w, have);
+  const blocks = toBlocks(w.steps);
   return (
-    <View style={{ gap: space.md }}>
+    <View style={{ gap: space.lg }}>
       {showObjective ? <Text style={type.strong}>{w.objective}</Text> : null}
-      <View>
-        <Text style={[type.eyebrow, { marginBottom: space.sm }]}>The work</Text>
-        <View style={st.work}>
-          {w.steps.map((s, i) => (
-            <Step key={i} s={s} units={units} />
+      {gear.length ? (
+        <View>
+          <Text style={[type.label, { marginBottom: space.sm }]}>Equipment</Text>
+          <View style={wk.gearRow}>
+            {gear.map((g) => (
+              <View key={g} style={wk.gearTile}>
+                <View style={wk.gearBox}>
+                  <Image source={GEAR_ICON[g]} style={wk.gearIcon} tintColor={color.text} accessibilityIgnoresInvertColors />
+                </View>
+                <Text style={wk.gearLabel} numberOfLines={2}>{GEAR_LABEL[g]}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+      {blocks.map((b, i) => (
+        <View key={i} style={wk.block}>
+          <View style={wk.blockHead}>
+            <View style={wk.num}>
+              <Text style={wk.numText}>{i + 1}</Text>
+            </View>
+            <Text style={[type.title, { flex: 1 }]}>{b.title}</Text>
+            {b.optional ? <Text style={type.small}>Optional</Text> : null}
+          </View>
+          {b.steps.map((s, j) => (
+            <Movement key={j} s={s} units={units} have={have} tint={kindTint(w)} />
           ))}
         </View>
-      </View>
+      ))}
       <View>
-        <Text style={[type.eyebrow, { marginBottom: 4 }]}>Why</Text>
+        <Text style={[type.label, { marginBottom: 4 }]}>Why</Text>
         <Text style={type.explain}>{w.rationale}</Text>
       </View>
       <View>
-        <Text style={[type.eyebrow, { marginBottom: 4 }]}>Make it easier</Text>
+        <Text style={[type.label, { marginBottom: 4 }]}>Make it easier</Text>
         <Text style={type.explain}>{w.scaling.easier}</Text>
       </View>
     </View>
   );
 }
 
-/** One line of work: what to do in semibold, the target in regular, extras in small type. */
-function Step({ s, units }: { s: WorkoutStep; units: Units }) {
-  const reps = s.repeat && s.repeat > 1 ? `${s.repeat} × ` : "";
-  const between = s.recoveryBetween ? `${minutesSeconds(s.recoveryBetween.durationSeconds)} ${s.recoveryBetween.note?.toLowerCase() ?? "rest"} between` : null;
-  if (s.exercise) {
-    return (
-      <Line>
-        <Text style={type.strong}>{s.exercise.name}</Text>
-        <Text style={[type.body, type.figure]}>{s.exercise.prescription}</Text>
-      </Line>
-    );
-  }
-  if (s.station) {
-    const sp = s.station;
-    return (
-      <Line accent={color.text}>
-        <Text style={type.strong}>
-          {reps}
-          {sp.recommended?.name ?? "No option available"}
-        </Text>
-        <Text style={[type.body, type.figure]}>
-          {sp.volume}
-          {sp.raceLoad ? ` at ${sp.raceLoad}` : ""}
-        </Text>
-        {sp.load ? <Text style={type.small}>{sp.load}</Text> : null}
-        {between ? <Text style={type.small}>{between}</Text> : null}
-        {sp.alternatives.length ? <Text style={type.small}>Or: {sp.alternatives.map((a) => a.name).join(", ")}</Text> : null}
-        {sp.unavailableNote ? <Callout tone={sp.recommended ? "note" : "safety"}>{sp.unavailableNote}</Callout> : null}
-      </Line>
-    );
-  }
-  // HYROX run segments keep their official 1 km label (D-007).
-  const amount = s.distanceMeters === 1000 ? `1 km${units === "mi" ? " (0.62 mi)" : ""}` : s.distanceMeters ? distance(s.distanceMeters, units) : s.durationSeconds ? minutesSeconds(s.durationSeconds) : "";
-  const target = s.target.pace ? paceRange(s.target.pace.fastSecPerKm, s.target.pace.slowSecPerKm, units) : `effort ${s.target.rpe.min}–${s.target.rpe.max} out of 10`;
-  const what = { warmup: "Warm-up", cooldown: "Cool-down", recovery: "Rest", work: "", steady: "", station: "" }[s.kind];
-  const quiet = s.kind === "warmup" || s.kind === "cooldown" || s.kind === "recovery";
-  return (
-    <Line accent={quiet ? color.line : color.accent}>
-      <Text style={quiet ? type.body : type.strong}>
-        {what ? `${what}: ` : ""}
-        {reps}
-        {amount}
-      </Text>
-      {s.kind === "recovery" ? null : <Text style={[type.body, type.figure]}>at {target}</Text>}
-      {s.note ? <Text style={type.small}>{s.note}</Text> : null}
-      {between ? <Text style={type.small}>{between}</Text> : null}
-    </Line>
-  );
+/** Warm-up, the main work, and cool-down, as numbered blocks. */
+function toBlocks(steps: WorkoutStep[]): { title: string; steps: WorkoutStep[]; optional?: boolean }[] {
+  const warm = steps.filter((s) => s.kind === "warmup");
+  const cool = steps.filter((s) => s.kind === "cooldown");
+  const main = steps.filter((s) => s.kind !== "warmup" && s.kind !== "cooldown");
+  const out: { title: string; steps: WorkoutStep[] }[] = [];
+  if (warm.length) out.push({ title: "Warm-up", steps: warm });
+  if (main.length) out.push({ title: main.some((s) => s.exercise) ? "Strength" : main.some((s) => s.station) ? "Main set" : "The run", steps: main });
+  if (cool.length) out.push({ title: "Cool-down", steps: cool });
+  return out;
 }
 
-function Line({ children, accent = color.accent }: { children: ReactNode; accent?: string }) {
-  return <View style={[st.line, { borderLeftColor: accent }]}>{children}</View>;
+
+const GEAR_LABEL: Record<MovementGear, string> = {
+  outdoor_run: "Run",
+  treadmill: "Treadmill",
+  curved_treadmill: "Curved treadmill",
+  skierg: "SkiErg",
+  rower: "Rower",
+  bike_erg: "Bike erg",
+  sled: "Sled",
+  turf_lane: "Turf lane",
+  plates: "Plates",
+  barbell_rack: "Barbell",
+  dumbbells: "Dumbbells",
+  kettlebells: "Kettlebells",
+  cable_machine: "Cable",
+  battle_rope: "Battle rope",
+  wall_ball: "Wall ball",
+  sandbag: "Sandbag",
+  open_floor: "Open floor",
+  bodyweight: "Bodyweight",
+};
+
+/**
+ * One movement: an icon of what you use, the name, and exactly how much and how hard.
+ * Rest between efforts sits as a quiet line. Alternatives (station substitutes) follow with ⇄.
+ */
+function Movement({ s, units, have, tint }: { s: WorkoutStep; units: Units; have: ReadonlySet<Equipment>; tint: string }) {
+  const reps = s.repeat && s.repeat > 1 ? `${s.repeat} × ` : "";
+  const between = s.recoveryBetween ? `${minutesSeconds(s.recoveryBetween.durationSeconds)} ${s.recoveryBetween.note?.toLowerCase() ?? "rest"} between` : null;
+  if (s.kind === "recovery") {
+    return (
+      <View style={wk.rest}>
+        <Text style={type.small}>Rest {s.durationSeconds ? minutesSeconds(s.durationSeconds) : ""}{s.note ? `. ${s.note}` : ""}</Text>
+      </View>
+    );
+  }
+  const gear = stepGear(s, have)[0] ?? "bodyweight";
+  let name: string;
+  const lines: string[] = [];
+  let alternatives: string | null = null;
+  let warning: { text: string; safety: boolean } | null = null;
+  if (s.exercise) {
+    name = s.exercise.name;
+    lines.push(s.exercise.prescription);
+  } else if (s.station) {
+    const sp = s.station;
+    name = sp.recommended?.name ?? "No option available";
+    lines.push(`${reps}${sp.volume}${sp.raceLoad ? ` at ${sp.raceLoad}` : ""}`);
+    if (sp.load) lines.push(sp.load);
+    if (sp.alternatives.length) alternatives = sp.alternatives.map((a) => a.name).join(", ");
+    if (sp.unavailableNote) warning = { text: sp.unavailableNote, safety: !sp.recommended };
+  } else {
+    // HYROX run segments keep their official 1 km label (D-007).
+    const amount = s.distanceMeters === 1000 ? `1 km${units === "mi" ? " (0.62 mi)" : ""}` : s.distanceMeters ? distance(s.distanceMeters, units) : s.durationSeconds ? minutesSeconds(s.durationSeconds) : "";
+    const target = s.target.pace ? paceRange(s.target.pace.fastSecPerKm, s.target.pace.slowSecPerKm, units) : `effort ${s.target.rpe.min}–${s.target.rpe.max} out of 10`;
+    name = { warmup: "Easy run", cooldown: "Easy jog", work: s.target.zone === "repetition" ? "Strides" : "Run", steady: s.target.zone === "easy" || s.target.zone === "recovery" ? "Easy run" : "Steady run", station: "Run", recovery: "Rest" }[s.kind];
+    lines.push(`${reps}${amount} at ${target}`);
+  }
+  if (between) lines.push(between);
+  // Notes that only repeat the movement's name and dose ("Step-ups: 3 × 12") add nothing here.
+  if (s.note && !s.note.includes(name)) lines.push(s.note);
+  return (
+    <View style={wk.move}>
+      <View style={[wk.thumb, { borderColor: tint }]}>
+        <Image source={GEAR_ICON[gear]} style={wk.thumbIcon} tintColor={color.text} accessibilityIgnoresInvertColors />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={wk.moveName}>{name}</Text>
+        {lines.map((l, i) => (
+          <Text key={i} style={[i === 0 ? wk.moveMain : type.small, type.figure]}>{l}</Text>
+        ))}
+        {alternatives ? <Text style={[type.small, { marginTop: 2 }]}>⇄ Or: {alternatives}</Text> : null}
+        {warning ? <View style={{ marginTop: space.sm }}><Callout tone={warning.safety ? "safety" : "note"}>{warning.text}</Callout></View> : null}
+      </View>
+    </View>
+  );
 }
 
 const minutesSeconds = (sec: number): string => (sec < 120 ? `${Math.round(sec)} s` : sec % 60 === 0 ? `${sec / 60} min` : `${Math.floor(sec / 60)} min ${Math.round(sec % 60)} s`);
@@ -393,3 +457,21 @@ const st = StyleSheet.create({
   line: { borderLeftWidth: 2, borderRadius: 1, paddingLeft: space.md, paddingVertical: 2 },
 });
 
+
+const wk = StyleSheet.create({
+  gearRow: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  gearTile: { width: 76, alignItems: "flex-start", gap: 4 },
+  gearBox: { width: 76, height: 76, borderRadius: 18, backgroundColor: color.raised, alignItems: "center", justifyContent: "center" },
+  gearIcon: { width: 40, height: 40 },
+  gearLabel: { fontFamily: font.regular, fontSize: 12, lineHeight: 15, color: color.muted },
+  block: { gap: space.md },
+  blockHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  num: { width: 26, height: 26, borderRadius: 13, backgroundColor: color.text, alignItems: "center", justifyContent: "center" },
+  numText: { fontFamily: font.semibold, fontSize: 14, color: color.bg },
+  move: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
+  thumb: { width: 56, height: 56, borderRadius: 28, backgroundColor: color.raised, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  thumbIcon: { width: 30, height: 30 },
+  moveName: { fontFamily: font.semibold, fontSize: 16, lineHeight: 22, color: color.text, marginTop: 2 },
+  moveMain: { fontFamily: font.regular, fontSize: 15, lineHeight: 21, color: color.text },
+  rest: { marginLeft: 68, paddingVertical: 2 },
+});

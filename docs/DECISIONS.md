@@ -177,3 +177,13 @@ Logging, the review, recent workouts and onboarding open over the tabs. The plan
 **Why:** The product owner wants a social, motivating element. Ranking consistency rather than performance supports adherence, which drives results, without pushing anyone to overtrain.
 **Status:** Accepted (product owner 2026-10-16). Migration `20261016000009_leaderboard.sql` written and tested locally (22 checks); **push pending** (Cameron, with `db push`).
 
+## D-030 — Workout breakdown with equipment and movement rows (2026-10-16)
+**Decision:** Each session's details read like a coach's whiteboard, after a reference app the product owner shared (layout idea only; nothing copied). No Start button.
+- **Equipment row:** a tile for each piece of equipment the session uses, picked from the athlete's own checklist when a movement could use several things.
+- **Numbered blocks:** 1 Warm-up, 2 Main set / The run / Strength, 3 Cool-down.
+- **One row per movement:** a round icon of what you use, the movement name, the exact dose ("4 × 1 km at 7:45–8:00/mi", "3 × 10, controlled tempo", "2:45 of hard work, replaces 500 m of SkiErg"), rest as a quiet line, and alternatives after "⇄ Or:".
+- **Then "Why" and "Make it easier".**
+**Images:** the equipment icons are original line drawings made for this app (`apps/mobile/assets/equipment/`, 18 icons). Photos or short clips of each movement would be better. Proposed: shoot them at the product owner's gym (we can't use other apps' images). The movement rows are built so photos can replace the icons later.
+**Code:** `sessionEquipment` / `stepGear` in the engine (`hyrox/session-equipment.ts`, tested), and `SessionDetails` / `Movement` in `components/plan.tsx`.
+**Status:** Requested by the product owner 2026-10-16; built the same day, awaiting his phone check.
+

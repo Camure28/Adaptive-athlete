@@ -128,6 +128,12 @@ export function optionAvoidedByName(name: string, avoid: readonly string[]): boo
   return hit ? isAvoided(hit.id, avoid) : false;
 }
 
+/** The equipment a station or substitute needs, looked up by id or display name (null if unknown). */
+export function optionRequirement(idOrName: string): Equipment[][] | null {
+  const all = [...Object.values(REAL), ...Object.values(SUBSTITUTES).flat()];
+  return all.find((o) => o.id === idOrName || o.name === idOrName)?.requires ?? null;
+}
+
 export function isAvoided(optionId: string, avoid: readonly string[]): boolean {
   return avoid.some((a) => (AVOID as Record<string, readonly string[]>)[a]?.includes(optionId));
 }
