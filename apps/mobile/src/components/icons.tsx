@@ -39,3 +39,14 @@ export function ProfileIcon({ tint, filled = false }: { tint: string; filled?: b
     </View>
   );
 }
+
+export function LeaderboardIcon({ tint }: { tint: string; filled?: boolean }) {
+  const bar = (h: number) => ({ width: 6, height: h, borderWidth: 2, borderColor: tint, borderTopLeftRadius: 2, borderTopRightRadius: 2 });
+  return (
+    <View style={[box, { flexDirection: "row", alignItems: "flex-end", gap: 1, paddingBottom: 3 }]}>
+      <View style={bar(10)} />
+      <View style={[bar(16), { backgroundColor: tint }]} />
+      <View style={bar(7)} />
+    </View>
+  );
+}

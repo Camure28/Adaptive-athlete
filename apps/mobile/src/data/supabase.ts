@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { EMPTY_ANSWERS, toSavePayload, type Division, type OnboardingAnswers } from "@/onboarding/model";
 import { fromLogRow, fromManualLog, planFromRecord, toLogRow, type CompletedWorkout, type Equipment, type GymType, type HyroxGoal, type HyroxLevel, type Limitation, type LogRow, type ManualLog, type StoredReview, type TrainingStatus, type WeekRecord, type Weekday, type WorkoutRow } from "@adaptive-athlete/engine";
-import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan, type SavedReview } from "./backend";
+import { BackendError, type Account, type Backend, type GymInfo, type HyroxEvent, type LeaderboardProfile, type LeaderboardRow, type LeaderboardScope, type SavedPlan, type SavedReview } from "./backend";
 
 export class SupabaseBackend implements Backend {
   readonly mode = "supabase" as const;
@@ -93,6 +93,73 @@ export class SupabaseBackend implements Backend {
       "adapt-plan", { today }, "Your plan couldn't be updated. Check your connection and try again.",
     );
     return { review: r.review, createdAt: new Date().toISOString(), toVersion: r.changed ? r.version : null };
+  }
+
+  // ---- Leaderboard (D-029) ------------------------------------------------------------------
+
+  async loadLeaderboardProfile(): Promise<LeaderboardProfile | null> {
+    const failed = new BackendError("The leaderboard couldn't be loaded. Check your connection and try again.");
+    const [profile, gym] = await Promise.all([
+      this.db.from("leaderboard_profiles").select("nickname, opted_in").maybeSingle(),
+      this.db.from("gyms").select("id, name, join_code").maybeSingle(),
+    ]);
+    if (profile.error || gym.error) throw failed;
+    if (!profile.data) return null;
+    return {
+      nickname: profile.data.nickname,
+      optedIn: profile.data.opted_in,
+      gym: gym.data ? { id: gym.data.id, name: gym.data.name, joinCode: gym.data.join_code } : null,
+    };
+  }
+
+  async saveLeaderboardProfile(p: { nickname: string; optedIn: boolean }) {
+    const nickname = p.nickname.trim();
+    const existing = await this.db.from("leaderboard_profiles").select("athlete_id").maybeSingle();
+    if (existing.error) throw new BackendError("Your leaderboard settings couldn't be saved. Try again.");
+    let error;
+    if (existing.data) {
+      ({ error } = await this.db.from("leaderboard_profiles").update({ nickname, opted_in: p.optedIn }).eq("athlete_id", existing.data.athlete_id));
+    } else {
+      const athlete = await this.db.from("athletes").select("id").single();
+      if (athlete.error) throw new BackendError("Finish setting up your plan first.");
+      ({ error } = await this.db.from("leaderboard_profiles").insert({ athlete_id: athlete.data.id, nickname, opted_in: p.optedIn }));
+    }
+    if (error) {
+      if (error.code === "23505") throw new BackendError("That nickname is taken. Try another.");
+      if (error.code === "23514") throw new BackendError("Use 2 to 24 letters, numbers, spaces, dots, dashes or underscores, starting with a letter or number.");
+      throw new BackendError("Your leaderboard settings couldn't be saved. Try again.");
+    }
+  }
+
+  private async gymCall(name: "create_gym" | "join_gym", args: Record<string, string>): Promise<GymInfo> {
+    const { data, error } = await this.db.rpc(name, args);
+    if (error) throw new BackendError(error.code === "P0001" ? error.message : "That didn't work. Check your connection and try again.");
+    const row = (Array.isArray(data) ? data[0] : data) as { id: string; name: string; join_code: string } | undefined;
+    if (!row) throw new BackendError("That didn't work. Try again.");
+    return { id: row.id, name: row.name, joinCode: row.join_code };
+  }
+  createGym(name: string) {
+    return this.gymCall("create_gym", { p_name: name.trim() });
+  }
+  joinGym(code: string) {
+    return this.gymCall("join_gym", { p_code: code.trim() });
+  }
+  async leaveGym() {
+    const { error } = await this.db.rpc("leave_gym");
+    if (error) throw new BackendError("You couldn't leave the gym. Try again.");
+  }
+
+  async leaderboard(scope: LeaderboardScope, days: 7 | 28, today: string): Promise<LeaderboardRow[]> {
+    const { data, error } = await this.db.rpc("leaderboard", { p_scope: scope, p_days: days, p_today: today });
+    if (error) throw new BackendError(error.code === "P0001" ? error.message : "The leaderboard couldn't be loaded. Check your connection and try again.");
+    return ((data ?? []) as { rank: number; nickname: string; completion_pct: number | null; days_trained: number; sessions_logged: number; is_me: boolean }[]).map((r) => ({
+      rank: r.rank,
+      nickname: r.nickname,
+      completionPct: r.completion_pct,
+      daysTrained: r.days_trained,
+      sessionsLogged: r.sessions_logged,
+      isMe: r.is_me,
+    }));
   }
 
   async latestReview(): Promise<SavedReview | null> {

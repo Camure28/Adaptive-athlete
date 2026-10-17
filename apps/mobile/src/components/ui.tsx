@@ -234,8 +234,8 @@ export function Stepper({ value, onChange, step, min, max, unit, label }: { valu
 }
 
 /** primary: yellow pill. soft: a quiet card-coloured pill. quiet: text only. */
-export function Button({ title, onPress, kind = "primary", busy = false }: { title: string; onPress: () => void; kind?: "primary" | "soft" | "quiet"; busy?: boolean }) {
-  const box = kind === "primary" ? s.btn : kind === "soft" ? s.btnSoft : s.btnQuiet;
+export function Button({ title, onPress, kind = "primary", busy = false, onCard = false }: { title: string; onPress: () => void; kind?: "primary" | "soft" | "quiet"; busy?: boolean; onCard?: boolean }) {
+  const box = kind === "primary" ? s.btn : kind === "soft" ? [s.btnSoft, onCard && { backgroundColor: color.raised }] : s.btnQuiet;
   const text = kind === "primary" ? s.btnText : kind === "soft" ? s.btnSoftText : s.btnQuietText;
   return (
     <Pressable

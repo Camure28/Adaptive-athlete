@@ -1,5 +1,5 @@
 /**
- * The signed-in app: Home, Training and Profile tabs with a bottom bar.
+ * The signed-in app: Home, Training, Leaderboard and Profile tabs with a bottom bar.
  * Loads the athlete's current saved plan once (building it on first open, D-022) and again after
  * the answers are edited (`planRevision`), so every tab reads the same plan from the session.
  */
@@ -8,15 +8,15 @@ import { Tabs, type BottomTabBarProps } from "expo-router/js-tabs";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { HomeIcon, ProfileIcon, TrainingIcon } from "@/components/icons";
+import { HomeIcon, LeaderboardIcon, ProfileIcon, TrainingIcon } from "@/components/icons";
 import { TechLoader } from "@/components/loader";
 import { Button, Callout, Heading, Screen } from "@/components/ui";
 import { backend } from "@/data";
 import { localToday, useSession } from "@/lib/session";
 import { color, font, space } from "@/lib/theme";
 
-const ICONS = { home: HomeIcon, training: TrainingIcon, profile: ProfileIcon } as const;
-const LABELS = { home: "Home", training: "Training", profile: "Profile" } as const;
+const ICONS = { home: HomeIcon, training: TrainingIcon, leaderboard: LeaderboardIcon, profile: ProfileIcon } as const;
+const LABELS = { home: "Home", training: "Training", leaderboard: "Leaderboard", profile: "Profile" } as const;
 
 export default function TabsLayout() {
   const { plan, setPlanAndLogs, setReview, planRevision } = useSession();
@@ -74,6 +74,7 @@ export default function TabsLayout() {
     <Tabs screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: color.bg } }} tabBar={(props) => <TabBar {...props} />}>
       <Tabs.Screen name="home" options={{ title: "Home" }} />
       <Tabs.Screen name="training" options={{ title: "Training" }} />
+      <Tabs.Screen name="leaderboard" options={{ title: "Leaderboard" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );

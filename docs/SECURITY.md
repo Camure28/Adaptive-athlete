@@ -24,6 +24,12 @@ Proof: `supabase/tests/rls_test.sql` (84 checks), run with `pnpm db:test`. The s
 - Deletion: deleting the account removes all athlete data, history included.
 - Consent is recorded per kind and policy version.
 - AI boundary: provider data reaches an LLM only if that provider's terms allow it (D-005).
+- Leaderboard (D-029):
+  - It is opt-in, under a nickname. Other athletes see only nickname, plan completion %, days trained and sessions logged. They never see the underlying workouts, paces, effort, pain or any health data.
+  - Those figures come only from the `leaderboard()` function (security definer, signed-in and opted-in callers only).
+  - Gym membership changes only through a join code (`join_gym`); the `gym_id` column can't be written directly.
+  - Gyms are visible only to their members. Opting out removes you from every board at once.
+  - Tested in `supabase/tests/leaderboard_test.sql`.
 
 ## Not yet done (before launch)
 - Token encryption implementation and key management (server).

@@ -1,5 +1,6 @@
 /** Demo mode: in-memory only. Never used when a Supabase project is configured. */
 import {
+  addDays,
   adaptationInputFromRows,
   adaptPlan,
   fromManualLog,
@@ -11,7 +12,7 @@ import {
   type ManualLog,
 } from "@adaptive-athlete/engine";
 import { toEngineInputs, type OnboardingAnswers } from "@/onboarding/model";
-import { BackendError, type Account, type Backend, type HyroxEvent, type SavedPlan, type SavedReview } from "./backend";
+import { BackendError, type Account, type Backend, type GymInfo, type HyroxEvent, type LeaderboardProfile, type LeaderboardRow, type LeaderboardScope, type SavedPlan, type SavedReview } from "./backend";
 
 /** Demo-mode sample races only; the real list lives in the database. */
 const DEMO_EVENTS: HyroxEvent[] = [
@@ -28,6 +29,7 @@ export class DemoBackend implements Backend {
   private logs = new Map<string, CompletedWorkout>();
   private replies: { question_id: string; value: string; answered_on: string }[] = [];
   private review: SavedReview | null = null;
+  private board: LeaderboardProfile | null = null;
 
   async currentAccount() {
     return this.account;
@@ -106,5 +108,53 @@ export class DemoBackend implements Backend {
   }
   async loadOnboarding() {
     return this.answers ? structuredClone(this.answers) : null;
+  }
+
+  // ---- Leaderboard: demo mode has no other athletes, so the board only ever shows you. --------
+
+  async loadLeaderboardProfile() {
+    return this.board ? structuredClone(this.board) : null;
+  }
+  async saveLeaderboardProfile(p: { nickname: string; optedIn: boolean }) {
+    const nickname = p.nickname.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9 _.-]{1,23}$/.test(nickname)) throw new BackendError("Use 2 to 24 letters, numbers, spaces, dots, dashes or underscores, starting with a letter or number.");
+    this.board = { nickname, optedIn: p.optedIn, gym: this.board?.gym ?? null };
+  }
+  async createGym(name: string): Promise<GymInfo> {
+    if (!this.board) throw new BackendError("Join the leaderboard first.");
+    const gym = { id: "demo-gym", name: name.trim(), joinCode: "DEMO42" };
+    this.board.gym = gym;
+    return gym;
+  }
+  async joinGym(code: string): Promise<GymInfo> {
+    if (!this.board) throw new BackendError("Join the leaderboard first.");
+    if (code.trim().toUpperCase() !== "DEMO42") throw new BackendError("No gym has that code. Check it with your coach.");
+    const gym = { id: "demo-gym", name: "Demo gym", joinCode: "DEMO42" };
+    this.board.gym = gym;
+    return gym;
+  }
+  async leaveGym() {
+    if (this.board) this.board.gym = null;
+  }
+  async leaderboard(scope: LeaderboardScope, days: 7 | 28, today: string): Promise<LeaderboardRow[]> {
+    if (!this.board?.optedIn) throw new BackendError("Join the leaderboard to see it.");
+    if (scope === "gym" && !this.board.gym) throw new BackendError("Join a gym to see its leaderboard.");
+    const from = addDays(today, -(days - 1));
+    const inWindow = (d: string) => d >= from && d <= today;
+    const planned = (this.plan?.plan.weeks ?? []).flatMap((w) => w.workouts).filter((w) => inWindow(w.date) && w.type !== "rest" && w.type !== "race");
+    const logs = [...this.logs.values()].filter((l) => inWindow(l.date) && l.status !== "skipped");
+    const byPlanned = new Map([...this.logs.values()].filter((l) => l.plannedWorkoutId).map((l) => [l.plannedWorkoutId!, l]));
+    const done = planned.reduce((n, w) => {
+      const l = byPlanned.get(w.id);
+      return n + (l?.status === "completed" ? 1 : l?.status === "partial" ? 0.5 : 0);
+    }, 0);
+    return [{
+      rank: 1,
+      nickname: this.board.nickname,
+      completionPct: planned.length ? Math.min(100, Math.round((100 * done) / planned.length)) : null,
+      daysTrained: new Set(logs.map((l) => l.date)).size,
+      sessionsLogged: logs.length,
+      isMe: true,
+    }];
   }
 }

@@ -166,6 +166,14 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 - **Profile** has the account menu (formerly a separate screen), with the race, level, division and status at the top.
 
 Logging, the review, recent workouts and onboarding open over the tabs. The plan loads once for all tabs and reloads after the answers are edited.
-**Leaderboard:** requested as a "maybe" by the product owner. Not built yet, because it means showing one athlete's data to others (consent, privacy, what is ranked); options to be decided first.
+**Leaderboard:** added as a fourth tab (D-029).
 **Status:** Accepted (product owner 2026-10-16); built the same day, awaiting his phone check. The tab icons are drawn in code (no icon package).
+
+## D-029 — Opt-in consistency leaderboard: gym and worldwide (2026-10-16)
+**Decision:** A Leaderboard tab where athletes can opt in under a nickname and compare consistency with their gym or with everyone.
+- **What's ranked:** how much of their own plan they completed (partial sessions count half; rest days excluded), then days trained (any logged training), then sessions logged. Windows: this week (7 days) or 4 weeks. Measuring against each athlete's own plan lets every level compete fairly and rewards showing up, not speed.
+- **Privacy:** opt-in only, with a nickname (unique; the app suggests not using your full name). Others see the nickname and those three figures, nothing else. You must opt in to view. Leaving takes you off every board at once, and leaving the leaderboard keeps your nickname private.
+- **Gyms:** a coach or owner creates a gym and gets a 6-character code to share; athletes join with the code. One gym per athlete; up to 3 gyms created per athlete. The gym board shows only members.
+**Why:** The product owner wants a social, motivating element. Ranking consistency rather than performance supports adherence, which drives results, without pushing anyone to overtrain.
+**Status:** Accepted (product owner 2026-10-16). Migration `20261016000009_leaderboard.sql` written and tested locally (22 checks); **push pending** (Cameron, with `db push`).
 

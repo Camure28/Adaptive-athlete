@@ -25,6 +25,8 @@ Security rules and tests: see `docs/SECURITY.md`.
 | | `daily_recovery` | athlete / importer | HRV, resting HR, sleep — keyed by source so device baselines never mix |
 | Integrations | `provider_connections` | server | Provider, status, scopes, sync state (no secrets) |
 | | `provider_credentials` | server only | Encrypted OAuth tokens; invisible to clients |
+| Leaderboard | `leaderboard_profiles` | athlete (gym only via `join_gym`/`leave_gym`) | Nickname (unique, ignoring capitals), opted in, gym (D-029) |
+| | `gyms` | via `create_gym` | Name, 6-character join code, creator; visible to members only |
 | Compliance | `consents` | athlete (append) | Versioned consent records |
 | | `audit_log` | server | Who did what, without health values or free text |
 

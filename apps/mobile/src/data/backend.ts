@@ -40,6 +40,29 @@ export interface SavedReview {
   toVersion: number | null;
 }
 
+/** Leaderboard (D-029): opt-in, nickname only, consistency figures only. */
+export interface GymInfo {
+  id: string;
+  name: string;
+  /** Six characters to share with members. */
+  joinCode: string;
+}
+export interface LeaderboardProfile {
+  nickname: string;
+  optedIn: boolean;
+  gym: GymInfo | null;
+}
+export interface LeaderboardRow {
+  rank: number;
+  nickname: string;
+  /** Share of planned sessions done in the window; null when nothing was planned yet. */
+  completionPct: number | null;
+  daysTrained: number;
+  sessionsLogged: number;
+  isMe: boolean;
+}
+export type LeaderboardScope = "gym" | "world";
+
 export interface Backend {
   readonly mode: "supabase" | "demo";
   currentAccount(): Promise<Account | null>;
@@ -75,6 +98,15 @@ export interface Backend {
   listEvents(today: string): Promise<HyroxEvent[]>;
   /** Everything stored about this athlete, as formatted JSON (data export, SECURITY.md). */
   exportMyData(): Promise<string>;
+  /** This athlete's leaderboard profile, or null if they've never joined. */
+  loadLeaderboardProfile(): Promise<LeaderboardProfile | null>;
+  /** Joins (or renames, or opts in or out). Nicknames are unique, ignoring capitals. */
+  saveLeaderboardProfile(p: { nickname: string; optedIn: boolean }): Promise<void>;
+  createGym(name: string): Promise<GymInfo>;
+  joinGym(code: string): Promise<GymInfo>;
+  leaveGym(): Promise<void>;
+  /** Opted-in athletes ranked by consistency over the last `days` days ending `today`. */
+  leaderboard(scope: LeaderboardScope, days: 7 | 28, today: string): Promise<LeaderboardRow[]>;
 }
 
 export class BackendError extends Error {}

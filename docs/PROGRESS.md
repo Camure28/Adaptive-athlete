@@ -6,6 +6,15 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (leaderboard)
+- **Done (D-029):**
+  - **Screen:** a Leaderboard tab between Training and Profile. It has an opt-in screen with a nickname and a plain list of what others see and never see; gym / worldwide and this week / 4 weeks switches; your row highlighted; join a gym by code or create one (coach); and settings to rename, share the gym code, leave the gym or leave the leaderboard.
+  - **Database:** migration `20261016000009_leaderboard.sql` adds the `gyms` and `leaderboard_profiles` tables and the functions `create_gym`, `join_gym`, `leave_gym` and `leaderboard`. The data export includes the leaderboard profile and gym.
+  - **Tests:** 22 new database checks in `supabase/tests/leaderboard_test.sql`. The test runner now gives each `*_test.sql` file a fresh database.
+  - **Demo mode:** shows only you, and says so.
+- **Checked:** all security tests pass on a local Postgres 16 in this session; typecheck, lint, 261 engine and 39 app tests pass; web preview of the join, board, gym setup and settings screens.
+- **Open (Cameron):** `npx supabase db push --dry-run`, then `npx supabase db push` (one new migration, no function deploy). Then `git pull` and reload the app. Create your gym from the Leaderboard tab and share the code.
+
 ## 2026-10-17 — daily review
 - **Tests:** all pass. Typecheck and lint clean; 261 engine and 39 app tests; `pnpm db:test` 84 checks, all passed (run on a local Postgres 16 in the cloud review).
 - **Sync:** repo and Project compared doc by doc. `DECISIONS.md` (D-001–D-028), `PROGRESS.md`, `CLAUDE.md`, `HYROX_WEEK.md`, `HYROX_EQUIPMENT.md`, `ONBOARDING.md`, `RELEASE.md` and the sample plans already matched. The Project copies of `ADAPTATION_ENGINE.md` (§11 missing the two D-026 notes), `DATA_MODEL.md`, `SECURITY.md`, `SETUP_SUPABASE.md` (still said "paste SQL" / "Not yet") and `INTEGRATIONS.md` were older repo versions with nothing of their own, so they were refreshed from the repo. `GTM_RESEARCH.md` existed only in the Project and is now `docs/GTM_RESEARCH.md`. No conflicts, no duplicate decision numbers.
