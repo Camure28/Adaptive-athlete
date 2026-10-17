@@ -1,6 +1,6 @@
 # Adaptation Engine — Rubric
 
-Status: **APPROVED** by the product owner on 2026-10-16 (see §10), with changes to A-2, A-3 and P-7. Details marked *default, to confirm* are Claude's fill-ins where the product owner's note left a gap.
+Status: **APPROVED** by the product owner on 2026-10-16 (see §10), with changes to A-2, A-3 and P-7. Details marked *default, confirmed* were Claude's fill-ins where the product owner's note left a gap; all three were approved in the coach review 2026-10-17 (D-034).
 
 Implementation note: `packages/engine` already contains adaptation logic shared by the running and HYROX generators (D-009). Reconcile the code with this rubric rule by rule; the rubric wins.
 
@@ -110,8 +110,8 @@ Pain is recorded by **movement or body area, not diagnosis** (onboarding rule). 
 | ID | Condition | Decision |
 |---|---|---|
 | A-1 ✓ approved | 1 missed session | Don't make it up. If it was a key session (threshold, compromised, simulation) and a non-adjacent day is free this week, move it; otherwise drop it |
-| A-2 ✓ approved, changed | 2+ missed sessions in a week | Ask the athlete first whether they would like to pull back next week. If yes: keep the key sessions and trim total volume 10–20%. Either way, hold progression for that week. *Default, to confirm:* no answer within 48 h keeps the plan as written |
-| A-3 ✓ approved, changed | 7–13 consecutive days missed | Notify the athlete and ask what is happening and how they want to resume: on vacation or taking time off (pause the plan, with a return date), or ready to resume (re-entry week at ~70% of planned volume, then the plan resumes). Athletes can also mark vacation or time off ahead of time. *Default, to confirm:* the check-in is sent after 4 days with nothing logged |
+| A-2 ✓ approved, changed | 2+ missed sessions in a week | Ask the athlete first whether they would like to pull back next week. If yes: keep the key sessions and trim total volume 10–20%. Either way, hold progression for that week. *Default, confirmed 2026-10-17:* no answer within 48 h keeps the plan as written |
+| A-3 ✓ approved, changed | 7–13 consecutive days missed | Notify the athlete and ask what is happening and how they want to resume: on vacation or taking time off (pause the plan, with a return date), or ready to resume (re-entry week at ~70% of planned volume, then the plan resumes). Athletes can also mark vacation or time off ahead of time. *Default, confirmed 2026-10-17:* the check-in is sent after 4 days with nothing logged |
 | A-4 ✓ approved | 14+ consecutive days missed | Reassess the block (decision 8) and ask the athlete; may push phases or lower goals |
 | A-5 ✓ approved | Unplanned hard training logged | Counts toward the hard-day limit; move the next hard session if it would be back-to-back |
 
@@ -125,7 +125,7 @@ Pain is recorded by **movement or body area, not diagnosis** (onboarding rule). 
 | P-4 ✓ approved | Compromised run: station or substitute completed at prescribed volume, run splits within band, RPE ≤ target, on 2 sessions | Step station volume up 25% of race volume toward the level's ceiling (100%), for every level; once at 100%, progress run pace via P-1 |
 | P-5 ✓ approved | Compromised run: later 1 km runs > 5% slower than the first | Hold station progression; keep the session as-is to build pacing |
 | P-6 ✓ approved | Strength: all sets completed at prescribed load with ≥ 2 reps in reserve, on 2 sessions | +5% load lower body, +2.5% upper body |
-| P-7 ✓ approved, changed | One station is consistently the slowest relative to the level's station-time estimate (≥ 3 logs) | "Weakest station" focus: add a short technique block for that station to station-endurance sessions **and** program it more often, so it appears in compromised runs or station work at least once every week until it is no longer the slowest. *Default, to confirm:* the extra exposure replaces a different station, so weekly station volume doesn't grow |
+| P-7 ✓ approved, changed | One station is consistently the slowest relative to the level's station-time estimate (≥ 3 logs) | "Weakest station" focus: add a short technique block for that station to station-endurance sessions **and** program it more often, so it appears in compromised runs or station work at least once every week until it is no longer the slowest. *Default, confirmed 2026-10-17:* the extra exposure replaces a different station, so weekly station volume doesn't grow |
 
 ### T — Targets
 
@@ -209,7 +209,7 @@ Each rule gets unit tests at its threshold edges, plus synthetic athlete histori
 | 2026-10-16 | Fatigue and soreness scale | 1–5 taps; pain and RPE stay 0–10 (D-024) |
 | 2026-10-16 | Load-spike rule from the original engine | Kept, as F-6 (D-024) |
 
-All rules, guardrails and data gates are approved. Open: the three *default, to confirm* details in A-2, A-3 and P-7. A-3 needs push notifications and a pause/vacation feature in the app (Phase 4).
+All rules, guardrails and data gates are approved. The three default details in A-2, A-3 and P-7 were confirmed in the coach review 2026-10-17 (D-034). A-3 needs push notifications and a pause/vacation feature in the app (Phase 4).
 
 ## 11. Implementation status (engine, 2026-10-16)
 

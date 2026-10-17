@@ -1,7 +1,7 @@
 /**
  * HYROX programming parameters. Session mixes come from the approved week structure
- * (docs/HYROX_WEEK.md, product owner 2026-10-15). Numbers marked ENGINE ASSUMPTION are
- * Claude's defaults awaiting coach review.
+ * (docs/HYROX_WEEK.md, product owner 2026-10-15). Numbers marked "coach-approved" were Claude's
+ * defaults, approved in the coach review 2026-10-17 (D-034). ENGINE ASSUMPTION marks what is still open.
  */
 
 import type { ExperienceLevel } from "../types.js";
@@ -30,11 +30,11 @@ export interface LevelTemplate {
   doubles: "default_on" | "opt_in" | "never";
   halfSimulations: number;
   fullSimulations: number;
-  /** Rounds of station + 1 km run in a compromised session (build phase). ENGINE ASSUMPTION. */
+  /** Rounds of station + 1 km run in a compromised session (build phase). Coach-approved (D-034). */
   compromisedRounds: number;
-  /** Weekly run volume ceiling in metres. ENGINE ASSUMPTION. */
+  /** Weekly run volume ceiling in metres. Coach-approved (D-034). */
   peakRunMeters: number;
-  /** Station work as a fraction of race volume in base/build. ENGINE ASSUMPTION. */
+  /** Station work as a fraction of race volume in base/build. Coach-approved (D-034). */
   stationVolumeFraction: number;
   /** For reusing the running engine's fallback paces. */
   runExperience: ExperienceLevel;
@@ -96,7 +96,7 @@ export const FULL_SIM_MIN_DAYS_BEFORE_RACE = 10;
 export const FULL_SIM_PREFERRED_DAYS_BEFORE_RACE = 14;
 export const MIN_DAYS_BETWEEN_FULL_SIMS = 10; // ENGINE ASSUMPTION
 
-/** Estimated station times (seconds) for duration estimates only. ENGINE ASSUMPTION. */
+/** Estimated station times (seconds) for duration estimates only. Coach-approved (D-034). */
 export const STATION_SECONDS: Record<HyroxLevel, number> = {
   first_timer: 330,
   intermediate: 270,
@@ -105,4 +105,4 @@ export const STATION_SECONDS: Record<HyroxLevel, number> = {
 };
 
 export const HYROX_MIN_WEEKS = 8;
-export const HYROX_TAPER_WEEKS = 1; // ENGINE ASSUMPTION: 1 week taper, 2 when ≥ 14 weeks
+export const HYROX_TAPER_WEEKS = 1; // Coach-approved (D-034): 1 week taper, 2 when ≥ 14 weeks

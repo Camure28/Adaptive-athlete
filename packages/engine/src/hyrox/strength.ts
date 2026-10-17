@@ -6,8 +6,8 @@
  * overload) while the athlete still gets variety across the plan. Rep schemes follow the phase.
  *
  * Station-linked slots (squat, row, pulldown, carry) draw on the coach-rated catalog in
- * equipment.ts so ratings and limitations stay in one place. ENGINE ASSUMPTION: the other
- * exercise lists and rep schemes below are Claude's defaults awaiting coach review.
+ * equipment.ts so ratings and limitations stay in one place. The other exercise
+ * lists and rep schemes below were Claude's defaults, approved in the coach review 2026-10-17 (D-034).
  */
 import type { Phase } from "../types.js";
 import { isAvoided, optionAvoidedByName, resolveStation, type Equipment, type Limitation } from "./equipment.js";

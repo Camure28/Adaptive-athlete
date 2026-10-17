@@ -3,7 +3,7 @@
  * A-2 "yes"/"no", A-3 "resume", "<rule>.confirm" "yes"; S-1/S-2 follow-ups "better", "gone" and
  * "improving" count as the pain improving (PAIN_IMPROVED_ANSWERS); S-1.area takes a pain-map
  * group; Q-1 takes an RPE, which is also written into that session's log.
- * Wording is Claude's, awaiting coach review.
+ * Wording is Claude's; coach-approved 2026-10-17 (D-034).
  */
 export type AnswerOptions = { kind: "choices"; options: { value: string; label: string }[] } | { kind: "rpe" };
 

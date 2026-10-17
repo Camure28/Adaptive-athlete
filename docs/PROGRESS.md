@@ -6,6 +6,12 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-17 — claude.ai Project chat (coach review)
+- **Coach review done (D-034):** Cameron approved all 25 coaching defaults on the review page (pasted into chat; the page's database stayed empty, so his answers saved only on his device). "Awaiting coach review" / "ENGINE ASSUMPTION" markers on those items now read "coach-approved (D-034)" in the engine, app and docs. Comments and docs only; no behaviour change.
+- **Still open for the coach:** HYROX_WEEK assumptions 7 (simulation placement) and 9 (double-day pairing), and the `ADAPTATION_ENGINE.md` §11 rubric interpretations, which weren't on the page.
+- **Also explained:** the development build needs the Mac's `npx expo start`; `pnpm ios:release` installs a standalone build (7 days on a free Apple ID).
+- **Open (Cameron):** confirm `npx supabase db push` (plan start date) and `pnpm functions:deploy` from the repo root ran.
+
 ## 2026-10-16 — claude.ai Project chat (phone check)
 - **Verified by Cameron on the phone:** the Adapt name and A icon show after `npx expo prebuild --platform ios --clean` and `npx expo run:ios --device` (delete the old app first; iOS caches icons). Note for later rebuilds: changing the icon or name in `app.json` needs a clean prebuild, because the generated `ios/` folder keeps the old ones.
 - **Live:** the leaderboard (`20261016000009`) and account deletion (`20261017000010`) migrations; the 2026-10-16 dry run listed only `20261017000011_plan_start_date.sql` as pending.

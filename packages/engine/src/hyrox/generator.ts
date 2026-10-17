@@ -90,7 +90,7 @@ export class HyroxPlanError extends Error {}
 
 export type TrainingStatus = "building" | "consistent" | "race_ready";
 
-/** Base weeks allowed by training status. ENGINE ASSUMPTION for "consistent" (2 weeks). */
+/** Base weeks allowed by training status. "consistent" gets 2 weeks: approved by the coach (product owner) 2026-10-17, D-034. */
 const BASE_WEEKS_MAX: Record<TrainingStatus, number> = { building: Infinity, consistent: 2, race_ready: 0 };
 
 /** Turns base weeks beyond the athlete's allowance into build weeks. */
@@ -131,7 +131,7 @@ export function generateHyroxPlan(
 
   // ---- Calendar & phases --------------------------------------------------------------------
   // Weeks run Monday to Sunday. Starting mid-week makes week 1 a short week: only the days from
-  // the start date on are used, and its running volume shrinks to match (ENGINE ASSUMPTION).
+  // the start date on are used, and its running volume shrinks to match (approved by the coach (product owner) 2026-10-17, D-034).
   const startDay = planStart(athlete, opts.today);
   let firstMonday = startOfWeek(startDay);
   // No training days left in the start week (e.g. starting on a Sunday): begin the following Monday.

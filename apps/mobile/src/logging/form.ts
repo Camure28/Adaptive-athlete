@@ -39,7 +39,7 @@ export interface LogForm {
   notes: string;
 }
 
-/** Awaiting coach review (product owner chose the default list 2026-10-16). */
+/** Product owner chose the default list 2026-10-16; coach-approved 2026-10-17 (D-034). */
 export const BODY_AREA_LABELS: Record<LogBodyArea, string> = {
   foot_ankle: "Foot or ankle",
   calf_shin: "Calf or shin",

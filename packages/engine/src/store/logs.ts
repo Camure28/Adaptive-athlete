@@ -10,7 +10,7 @@ import type { BodyArea, CompletedSplit, CompletedWorkout, IsoDate, IsoInstant, P
 
 /**
  * Where it hurts, as the athlete chooses it on the log screen: by body area, never by diagnosis
- * (ADAPTATION_ENGINE.md S-1). Default list chosen by the product owner 2026-10-16, awaiting coach review.
+ * (ADAPTATION_ENGINE.md S-1). Default list chosen by the product owner 2026-10-16; coach-approved 2026-10-17 (D-034).
  */
 export const LOG_BODY_AREAS = [
   "foot_ankle", "calf_shin", "knee", "thigh_hamstring", "hip_glute",

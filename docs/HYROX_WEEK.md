@@ -33,9 +33,9 @@ Status: approved by product owner 2026-10-15.
 - Full simulations (8 + 8) in the peak phase: 1–2 for all levels, including first-timers, so the race distance isn't new on race day.
 - The last full simulation is no closer than 10–14 days before race day.
 
-## Engine interpretation and assumptions (for coach review)
+## Engine interpretation and assumptions
 
-Implemented in `packages/engine/src/hyrox/`. Items here are Claude's working defaults, not yet approved.
+Implemented in `packages/engine/src/hyrox/`. Claude's working defaults. **Coach-approved 2026-10-17 (D-034): 1, 2, 3, 4, 5, 6, 8 and 10.** Not yet reviewed: 7 (simulation placement) and 9 (double-day pairing).
 
 1. **What counts as a hard day.** A day with high-intensity conditioning: threshold, race-pace intervals, compromised run, or simulation. Strength and station endurance are *moderate*: they never go the day before a simulation or the race, or the day after a hard double. (Treating strength days as hard days would make the approved session counts impossible to fit; e.g. Intermediate would need 4–5 hard days.)
 2. **Run intensity in HYROX sessions.** The 1 km runs in compromised runs, simulations and race-pace intervals are prescribed at threshold pace (HYROX race effort).
@@ -49,7 +49,7 @@ Implemented in `packages/engine/src/hyrox/`. Items here are Claude's working def
 10. **Easy runs** are never longer than 75% of that week's long run.
 
 ## Session variety (product owner request 2026-10-16)
-No session repeats within a week, and key sessions change format from one week to the next. The format depends on the week number and on how many sessions of that kind came earlier in the week. Implemented in `packages/engine/src/hyrox/generator.ts` and `strength.ts`; pinned by the "variety" tests. **The formats below are Claude's defaults, awaiting coach review.**
+No session repeats within a week, and key sessions change format from one week to the next. The format depends on the week number and on how many sessions of that kind came earlier in the week. Implemented in `packages/engine/src/hyrox/generator.ts` and `strength.ts`; pinned by the "variety" tests. **The formats below were Claude's defaults; all coach-approved 2026-10-17 (D-034).**
 
 | Session | Formats (rotating) |
 |---|---|
