@@ -6,6 +6,10 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (AI coach chat parked)
+- **Discussed:** an AI coach chat in which athletes describe what's going on and the plan adapts. The product owner chose to **hold it for a future release**. The agreed design (the AI only turns messages into engine inputs, the athlete confirms, the rules decide), prerequisites, costs and privacy notes are in the new `docs/ROADMAP.md`. Movement photos are also listed there.
+- **No code changes.**
+
 ## 2026-10-16 — claude.ai Project chat (workout breakdown)
 - **Done (D-030):** session details now show an Equipment row (icon tiles), numbered blocks (Warm-up / Main set / Cool-down) and one row per movement: round equipment icon, name, exact dose, rest, and alternatives. This applies everywhere a session opens: Home ("See the workout"), Training and the calendar.
   - **Icons:** 18 original equipment line icons, drawn and rendered for this app (`assets/equipment/*.png`; source script not kept in the repo; redraw with any SVG tool).
