@@ -6,6 +6,17 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (tester readiness)
+- **Agreed:** the order of work toward a professional product, now at the top of `docs/ROADMAP.md`. Started with item 1, pilot readiness.
+- **Done (D-031):**
+  - **Delete my account** in Profile: explanation, "Export my data first", type DELETE to confirm, then signs out. Migration `20261017000010_account_deletion.sql` adds `delete_my_account()`; `supabase/tests/account_deletion_test.sql` checks signed-out callers can't use it, the account and all its data go, a gym the athlete created stays, and other athletes are untouched.
+  - **Privacy policy** screen (Profile → Privacy policy, and a link on sign-in), with the same text in `docs/PRIVACY_POLICY.md`.
+  - **Send feedback** in Profile: opens an email with the version filled in, once `EXPO_PUBLIC_SUPPORT_EMAIL` is set (`.env.example`).
+  - `RELEASE.md` §3 checklist updated, including the steps to turn email confirmation back on.
+  - **App icon:** three drafts shown to Cameron in chat; nothing changed in the app yet.
+- **Checked:** `pnpm db:test` (all three suites pass on local Postgres 16), typecheck, lint, 265 engine and 39 app tests; web preview of Profile, the policy and the delete flow (demo mode).
+- **Open (Cameron):** `npx supabase db push --dry-run`, then `npx supabase db push` (account deletion, plus the leaderboard migration if not yet pushed); pick an icon; a support email; turn email confirmation on; confirm the 18+ line. Still open from the daily review: the half-landed plan start date (`planStartDate` with no migration or decision).
+
 ## 2026-10-16 — claude.ai Project chat (AI coach chat parked)
 - **Discussed:** an AI coach chat in which athletes describe what's going on and the plan adapts. The product owner chose to **hold it for a future release**. The agreed design (the AI only turns messages into engine inputs, the athlete confirms, the rules decide), prerequisites, costs and privacy notes are in the new `docs/ROADMAP.md`. Movement photos are also listed there.
 - **No code changes.**

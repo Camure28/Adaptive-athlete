@@ -4,7 +4,7 @@ import { Text } from "react-native";
 import { Button, Callout, Field, Heading, Question, Screen, Wordmark } from "@/components/ui";
 import { backend } from "@/data";
 import { useSession } from "@/lib/session";
-import { space, type } from "@/lib/theme";
+import { color, space, type } from "@/lib/theme";
 
 export default function SignIn() {
   const { setAccount } = useSession();
@@ -62,7 +62,12 @@ export default function SignIn() {
       <Question label="Password" error={error ?? undefined}>
         <Field value={password} onChangeText={setPassword} secureTextEntry autoComplete={mode === "create" ? "new-password" : "current-password"} placeholder="At least 8 characters" accessibilityLabel="Password" />
       </Question>
-      <Text style={[type.small, { marginTop: -space.md }]}>Your training data is only visible to you.</Text>
+      <Text style={[type.small, { marginTop: -space.md }]}>
+        Your training data is only visible to you.{" "}
+        <Text style={{ color: color.accent }} accessibilityRole="link" onPress={() => router.push("/privacy")}>
+          Privacy policy
+        </Text>
+      </Text>
     </Screen>
   );
 }

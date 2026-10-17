@@ -21,7 +21,8 @@ Proof: `supabase/tests/rls_test.sql` (84 checks), run with `pnpm db:test`. The s
 ## Privacy
 - Data minimisation: limitations are "movements to avoid", not diagnoses; division instead of sex.
 - Export: `export_my_data()` returns everything the athlete owns, and only that.
-- Deletion: deleting the account removes all athlete data, history included.
+- Deletion: deleting the account removes all athlete data, history included. Athletes do it themselves from Profile → Delete my account (D-031), through `delete_my_account()`: signed-in callers only, deletes only the caller's own login, and the cascade removes everything else. Tested in `supabase/tests/account_deletion_test.sql`.
+- Privacy policy: pilot draft in the app and in `PRIVACY_POLICY.md` (D-031); legal review before launch.
 - Consent is recorded per kind and policy version.
 - AI boundary: provider data reaches an LLM only if that provider's terms allow it (D-005).
 - Leaderboard (D-029):

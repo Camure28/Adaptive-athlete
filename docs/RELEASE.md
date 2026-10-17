@@ -46,11 +46,11 @@ Notes:
 
 ## 3. Before anyone else uses it (checklist)
 
-- [ ] Turn Supabase email confirmation back on (CLAUDE.md status).
-- [ ] Privacy policy page (what we collect, why, how to delete it) with its link in the app and App Store Connect.
-- [ ] Delete my account in the app (required before the App Store; strongly advised for testers).
-- [ ] "Send feedback" in the Account menu.
-- [ ] A real app icon and name check (`apps/mobile/assets/icon.png` is still the Expo default).
+- [ ] **Turn Supabase email confirmation back on** (Cameron, 2 minutes). Supabase dashboard → the project → Authentication → Sign In / Providers → Email → switch **Confirm email** on → Save. New athletes then get an email link before they can sign in; the app already says "check your email" when that happens. Existing accounts aren't affected.
+- [x] Privacy policy (D-031): in the app (Profile → Privacy policy, and a link on the sign-in screen). The same text is in `docs/PRIVACY_POLICY.md`. **Still needed:** a public web address for it, which App Store Connect asks for.
+- [x] Delete my account in the app (D-031): Profile → Delete my account. Needs migration `20261017000010_account_deletion.sql` pushed (`npx supabase db push`).
+- [x] "Send feedback" in Profile (D-031): opens an email with the app version filled in. **Still needed:** a support email address, set as `EXPO_PUBLIC_SUPPORT_EMAIL` in `apps/mobile/.env.local` (and in EAS for TestFlight builds). Until then the row shows "Soon".
+- [ ] A real app icon and name check (`apps/mobile/assets/icon.png` is still the Expo default). Drafts shown to Cameron 2026-10-16; needs a native rebuild once chosen.
 - [ ] A test account for Apple's reviewer.
 
 ## Android (later)

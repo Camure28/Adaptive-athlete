@@ -2,6 +2,15 @@
 
 Ideas the product owner has approved in principle but parked for a future release. Each entry records the design agreed so far, so whoever picks it up starts from it and doesn't redesign from scratch.
 
+## Order of work toward a professional product (agreed 2026-10-16)
+Claude's recommendation; the product owner said "let's start with your recommendations".
+1. **Pilot readiness.** Coach review of the session formats; the tester checklist in `RELEASE.md` §3 (account deletion, privacy policy, feedback, app icon, email confirmation); TestFlight once the Apple Developer Program is bought. *Started 2026-10-16 (D-031).*
+2. **HYROX-specific tracking.** Station and run-split logging on every HYROX session, station progress over time, a race-time projection with its confidence shown, and a monthly progress report.
+3. **Apple Health import and reminders.** Switch on the built import pipeline (D-023) once the developer program allows HealthKit; session reminders.
+4. **Gym coach dashboard and gym pricing.** A coach sees their members' consistency and flags; a per-gym price.
+5. **Race-week tools and post-race report.** Taper week, race-day pacing card, and a report comparing the race to the plan.
+6. **Running it as a business.** Subscriptions, crash monitoring, a website (which also hosts the privacy policy), and the health-data privacy review (`SECURITY.md`).
+
 ## AI coach chat (parked 2026-10-16)
 
 **Idea (product owner):** athletes type what's going on ("my knee's sore", "travelling Thursday to Sunday", "I did a CrossFit class") and the plan adapts to what they said.

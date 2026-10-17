@@ -18,7 +18,7 @@ Several Claude sessions work on this project (claude.ai Project chats, Claude Co
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
 - `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`; signed-in screens are bottom tabs in `src/app/(tabs)`: Home, Training, Leaderboard, Profile). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
 - `supabase/`: migrations with row-level security; `pnpm db:test` runs every `supabase/tests/*_test.sql` (each on a fresh local database). `functions/generate-plan` builds and saves plans (D-022) and `functions/adapt-plan` adapts them after each log (D-026), using the engine bundled by `pnpm functions:build`; shared request code in `functions/_shared/request.ts`.
-- `docs/`: parked ideas for later releases (`ROADMAP.md`, e.g. AI coach chat), release and TestFlight steps (`RELEASE.md`), decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
+- `docs/`: order of work and parked ideas (`ROADMAP.md`, e.g. AI coach chat), release and TestFlight steps (`RELEASE.md`), the draft privacy policy (`PRIVACY_POLICY.md`, same text as `apps/mobile/src/lib/privacy.ts`), decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
 
 ## Commands
 ```bash
@@ -53,4 +53,5 @@ pnpm functions:deploy                      # rebuild the engine bundle, deploy g
 - Verified 2026-10-16: sign-up and onboarding save to Supabase from the iPhone.
 - Verified 2026-10-16: first plan built and saved by the generate-plan Edge Function, shown on the iPhone (D-022).
 - Live 2026-10-16: workout logging including workouts outside the plan (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
-- Next: UI design pass, Apple Health, TestFlight pilot (needs the paid Apple Developer Program).
+- Built 2026-10-16: account deletion, privacy policy and feedback in Profile (D-031); deletion migration push pending.
+- Next (order in `docs/ROADMAP.md`): pilot readiness (coach review, app icon, TestFlight), then HYROX station tracking, Apple Health.

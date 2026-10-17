@@ -69,6 +69,8 @@ export interface Backend {
   signUp(email: string, password: string): Promise<{ account: Account | null; needsEmailConfirmation: boolean }>;
   signIn(email: string, password: string): Promise<Account>;
   signOut(): Promise<void>;
+  /** Permanently deletes the signed-in account and everything stored about the athlete, then signs out. */
+  deleteMyAccount(): Promise<void>;
   saveOnboarding(answers: OnboardingAnswers, today: string): Promise<void>;
   /** The answers last saved, or null if this account hasn't finished onboarding. */
   loadOnboarding(): Promise<OnboardingAnswers | null>;

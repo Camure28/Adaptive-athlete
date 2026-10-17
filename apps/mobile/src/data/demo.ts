@@ -43,6 +43,9 @@ export class DemoBackend implements Backend {
     this.account = { userId: "demo-user", email };
     return this.account;
   }
+  async deleteMyAccount() {
+    await this.signOut();
+  }
   async signOut() {
     this.account = null;
     this.answers = null;

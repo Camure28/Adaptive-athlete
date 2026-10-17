@@ -187,3 +187,10 @@ Logging, the review, recent workouts and onboarding open over the tabs. The plan
 **Code:** `sessionEquipment` / `stepGear` in the engine (`hyrox/session-equipment.ts`, tested), and `SessionDetails` / `Movement` in `components/plan.tsx`.
 **Status:** Requested by the product owner 2026-10-16; built the same day, awaiting his phone check.
 
+
+## D-031 — Tester readiness: account deletion, privacy policy, feedback (2026-10-16)
+**Decision:** Before anyone else uses the app, it gets the basics testers and the App Store expect, in the order agreed in `ROADMAP.md`.
+- **Delete my account** (Profile): explains what is deleted, offers the data export first, and asks the athlete to type DELETE. It runs `delete_my_account()`, which deletes only the caller's own login; the existing cascade removes all their data, history included. A gym they created stays for its members. Migration `20261017000010_account_deletion.sql`, tested in `supabase/tests/account_deletion_test.sql`.
+- **Privacy policy:** a pilot draft written from the app's real data flows (what we collect, why, who handles it, export and deletion, adults 18+, not medical advice). It is shown in the app (Profile, and a link on sign-in) and kept in `docs/PRIVACY_POLICY.md` for the website. Not legal advice; reviewed before public launch.
+- **Send feedback** (Profile): opens an email to a support address with the app version filled in. The address is a setting (`EXPO_PUBLIC_SUPPORT_EMAIL`), never a personal email by default; until it's set the row shows "Soon".
+**Status:** Order of work agreed by the product owner 2026-10-16; built the same day. **Open (product owner):** the support email address, a public URL for the policy, confirming the 18+ age line, choosing the app icon, pushing the migration.

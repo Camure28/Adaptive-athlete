@@ -66,6 +66,13 @@ export class SupabaseBackend implements Backend {
     await this.db.auth.signOut();
   }
 
+  async deleteMyAccount() {
+    const { error } = await this.db.rpc("delete_my_account");
+    if (error) throw new BackendError("Your account couldn't be deleted. Check your connection and try again.");
+    // The account no longer exists on the server, so only clear the session on this phone.
+    await this.db.auth.signOut({ scope: "local" });
+  }
+
   async saveOnboarding(answers: OnboardingAnswers, today: string) {
     const { error } = await this.db.rpc("save_hyrox_onboarding", { p: toSavePayload(answers, today) });
     if (error) throw new BackendError("Your answers couldn't be saved. Check your connection and try again.");
