@@ -22,7 +22,7 @@ export default function DeleteAccountScreen() {
   const exportFirst = async () => {
     setError(null);
     try {
-      await Share.share({ title: "Adaptive Athlete data export", message: await backend.exportMyData() });
+      await Share.share({ title: "Adapt data export", message: await backend.exportMyData() });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Your data couldn't be exported.");
     }

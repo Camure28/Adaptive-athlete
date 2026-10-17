@@ -71,7 +71,7 @@ export function Lane({ total, current }: { total: number; current: number }) {
 export function Wordmark() {
   return (
     <Text style={s.mark} accessibilityRole="header">
-      Adaptive Athlete
+      Adapt
     </Text>
   );
 }

@@ -11,7 +11,7 @@ export const PRIVACY_SECTIONS: { title: string; body: string[] }[] = [
   {
     title: "The short version",
     body: [
-      "Adaptive Athlete uses what you tell it about your training to build and adjust your HYROX plan. We don't sell your data, show ads, or share it with advertisers.",
+      "Adapt uses what you tell it about your training to build and adjust your HYROX plan. We don't sell your data, show ads, or share it with advertisers.",
       "You can export everything we store about you, or delete your account and all of it, from Profile at any time.",
     ],
   },
@@ -68,7 +68,7 @@ export const PRIVACY_SECTIONS: { title: string; body: string[] }[] = [
   },
   {
     title: "Age",
-    body: ["Adaptive Athlete is for adults 18 and over."],
+    body: ["Adapt is for adults 18 and over."],
   },
   {
     title: "Changes and contact",

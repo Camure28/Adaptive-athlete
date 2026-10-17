@@ -41,7 +41,7 @@ export function TechLoader({ lines, stage, systemFont = false }: { lines: string
       <Animated.View style={{ opacity: fade, alignItems: "center", gap: 20 }}>
         <Animated.View style={[st.arc, { transform: [{ rotate: still ? "45deg" : rotate }] }]} />
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Text style={[st.mark, family("Outfit_600SemiBold"), systemFont && { fontWeight: "600" }]}>Adaptive Athlete</Text>
+          <Text style={[st.mark, family("Outfit_600SemiBold"), systemFont && { fontWeight: "600" }]}>Adapt</Text>
           <Text style={[st.status, family("Outfit_400Regular")]} numberOfLines={1}>
             {line}
           </Text>

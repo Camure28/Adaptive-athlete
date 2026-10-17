@@ -54,4 +54,5 @@ pnpm functions:deploy                      # rebuild the engine bundle, deploy g
 - Verified 2026-10-16: first plan built and saved by the generate-plan Edge Function, shown on the iPhone (D-022).
 - Live 2026-10-16: workout logging including workouts outside the plan (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
 - Built 2026-10-16: account deletion, privacy policy and feedback in Profile (D-031); deletion migration push pending.
-- Next (order in `docs/ROADMAP.md`): pilot readiness (coach review, app icon, TestFlight), then HYROX station tracking, Apple Health.
+- Name and icon 2026-10-16: athletes see **Adapt** (D-032); code, repo and bundle ID keep "adaptive-athlete".
+- Next (order in `docs/ROADMAP.md`): pilot readiness (coach review, TestFlight), then HYROX station tracking, Apple Health.

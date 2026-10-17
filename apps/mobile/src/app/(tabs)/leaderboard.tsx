@@ -247,7 +247,7 @@ function Settings({ profile, onChanged }: { profile: LeaderboardProfile; onChang
           <Text style={[type.small, { marginTop: 2 }]}>Gym code: {profile.gym.joinCode}</Text>
           <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md }}>
             <View style={{ flex: 1 }}>
-              <Button kind="soft" onCard title="Share code" onPress={() => { Share.share({ message: `Join ${profile.gym!.name} on the Adaptive Athlete leaderboard with code ${profile.gym!.joinCode}.` }).catch(() => undefined); }} />
+              <Button kind="soft" onCard title="Share code" onPress={() => { Share.share({ message: `Join ${profile.gym!.name} on the Adapt leaderboard with code ${profile.gym!.joinCode}.` }).catch(() => undefined); }} />
             </View>
             <View style={{ flex: 1 }}>
               <Button kind="soft" onCard title="Leave gym" onPress={() => act(() => backend.leaveGym(), "You left the gym.")} />

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Adaptive Athlete",
+    "name": "Adapt",
     "slug": "adaptive-athlete",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E8EBEA",
+        "backgroundColor": "#12151B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

@@ -6,6 +6,12 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (name and icon)
+- **Done (D-032):** the app is now **Adapt** with the A icon. Changed: `app.json` name and Android icon background; new `assets/icon.png`, Android foreground, background and monochrome, favicon and `splash-icon.png`; the name everywhere athletes see it, including `docs/PRIVACY_POLICY.md`. Internal names (bundle ID, scheme, repo) unchanged.
+- **Brainstormed:** about 20 names. Ruled out after quick searches: Kilo, Calibr8, Dialed, Splitline, AdaptFit (an "AdaptFit" app already exists).
+- **Checked:** typecheck, lint, 265 engine and 39 app tests; web preview of sign-in.
+- **Open (Cameron):** native rebuild (`cd apps/mobile && npx expo run:ios --device`) to see the name and icon. Before the App Store: a trademark check on "Adapt", and pick a unique store name (for example "Adapt: Hybrid Race Training").
+
 ## 2026-10-16 — claude.ai Project chat (tester readiness)
 - **Agreed:** the order of work toward a professional product, now at the top of `docs/ROADMAP.md`. Started with item 1, pilot readiness.
 - **Done (D-031):**

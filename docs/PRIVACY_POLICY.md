@@ -2,11 +2,11 @@
 
 > **Draft for the pilot**, version `pilot-2026-10-16`. Written by Claude from the app's actual data flows; not legal advice. Review before the public launch (health-data laws, SECURITY.md). The in-app copy is `apps/mobile/src/lib/privacy.ts`; change both together. This is the text to publish at the public URL App Store Connect asks for.
 
-**Adaptive Athlete privacy policy.** Last updated October 16, 2026.
+**Adapt privacy policy.** Last updated October 16, 2026.
 
 ## The short version
 
-- Adaptive Athlete uses what you tell it about your training to build and adjust your HYROX plan. We don't sell your data, show ads, or share it with advertisers.
+- Adapt uses what you tell it about your training to build and adjust your HYROX plan. We don't sell your data, show ads, or share it with advertisers.
 - You can export everything we store about you, or delete your account and all of it, from Profile at any time.
 
 ## What we collect
@@ -52,7 +52,7 @@ The app gives training guidance, not medical advice, and it doesn't diagnose inj
 
 ## Age
 
-Adaptive Athlete is for adults 18 and over.
+Adapt is for adults 18 and over.
 
 ## Changes and contact
 

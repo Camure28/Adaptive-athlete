@@ -25,7 +25,7 @@ export default function ProfileScreen() {
     setMessage(null);
     try {
       const json = await backend.exportMyData();
-      await Share.share({ title: "Adaptive Athlete data export", message: json });
+      await Share.share({ title: "Adapt data export", message: json });
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Your data couldn't be exported.");
     } finally {
@@ -36,7 +36,7 @@ export default function ProfileScreen() {
   const version = Constants.expoConfig?.version ?? "1.0.0";
   const sendFeedback = async () => {
     if (!SUPPORT_EMAIL) return;
-    const subject = encodeURIComponent(`Adaptive Athlete feedback (${version})`);
+    const subject = encodeURIComponent(`Adapt feedback (${version})`);
     const body = encodeURIComponent(`\n\n---\nVersion ${version}${backend.mode === "demo" ? " demo" : ""} · ${Platform.OS} ${String(Platform.Version)}`);
     try {
       await Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
@@ -93,7 +93,7 @@ export default function ProfileScreen() {
         <Row label="Sign out" onPress={signOut} danger />
       </Section>
 
-      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>Adaptive Athlete, version {version}{backend.mode === "demo" ? " (demo)" : ""}</Text>
+      <Text style={[type.data, { textAlign: "center", marginTop: space.lg }]}>Adapt, version {version}{backend.mode === "demo" ? " (demo)" : ""}</Text>
     </Screen>
   );
 }

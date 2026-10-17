@@ -50,7 +50,7 @@ Notes:
 - [x] Privacy policy (D-031): in the app (Profile → Privacy policy, and a link on the sign-in screen). The same text is in `docs/PRIVACY_POLICY.md`. **Still needed:** a public web address for it, which App Store Connect asks for.
 - [x] Delete my account in the app (D-031): Profile → Delete my account. Needs migration `20261017000010_account_deletion.sql` pushed (`npx supabase db push`).
 - [x] "Send feedback" in Profile (D-031): opens an email with the app version filled in. **Still needed:** a support email address, set as `EXPO_PUBLIC_SUPPORT_EMAIL` in `apps/mobile/.env.local` (and in EAS for TestFlight builds). Until then the row shows "Soon".
-- [ ] A real app icon and name check (`apps/mobile/assets/icon.png` is still the Expo default). Drafts shown to Cameron 2026-10-16; needs a native rebuild once chosen.
+- [x] App icon and name (D-032): **Adapt** with the A icon. **Still needed:** a trademark check, and a unique App Store name ("Adapt" alone is taken; for example "Adapt: Hybrid Race Training").
 - [ ] A test account for Apple's reviewer.
 
 ## Android (later)

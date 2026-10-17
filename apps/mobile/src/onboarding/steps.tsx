@@ -419,7 +419,7 @@ function Review({ a, update, errors }: StepProps) {
       <Question label="Your data" error={errors.consentHealthData}>
         <Choice
           multi
-          label="I agree to Adaptive Athlete using my training data to build and adjust my plan"
+          label="I agree to Adapt using my training data to build and adjust my plan"
           detail="Your data is only visible to you. You can export or delete it at any time."
           selected={a.consentHealthData}
           onPress={() => update({ consentHealthData: !a.consentHealthData })}
