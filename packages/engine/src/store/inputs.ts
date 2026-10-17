@@ -21,6 +21,8 @@ export interface StoredProfile {
     max_weekend_minutes: number;
     weekly_run_meters: number;
     training_status: string | null;
+    /** The start day chosen at onboarding (migration 20261016000009); absent on older rows. */
+    plan_start_date?: string | null;
   };
   equipment: string[];
   /** Movements from athlete_limitations, including "other" (a free-text note only). */
@@ -55,6 +57,7 @@ export function inputsFromProfile(s: StoredProfile, today: IsoDate): { athlete: 
   if (p.long_session_day !== null) athlete.preferredLongDay = p.long_session_day as Weekday;
   if (level === "advanced" && p.wants_doubles !== null) athlete.wantsDoubles = p.wants_doubles;
   if (p.training_status) athlete.trainingStatus = p.training_status as TrainingStatus;
+  if (p.plan_start_date) athlete.planStartDate = p.plan_start_date;
 
   const division = s.goal.hyrox_division;
   const goal: HyroxGoal = {

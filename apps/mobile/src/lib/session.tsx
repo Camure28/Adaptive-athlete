@@ -21,6 +21,9 @@ interface SessionState {
   /** The latest adaptation review (D-026). */
   review: SavedReview | null;
   setReview: (r: SavedReview | null) => void;
+  /** Bumped after the answers are saved, so the tabs reload the newly built plan. */
+  planRevision: number;
+  bumpPlan: () => void;
 }
 
 const Ctx = createContext<SessionState | null>(null);
@@ -32,6 +35,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<Record<string, CompletedWorkout>>({});
   const [review, setReview] = useState<SavedReview | null>(null);
   const [recent, setRecent] = useState<CompletedWorkout[]>([]);
+  const [planRevision, setPlanRevision] = useState(0);
+  const bumpPlan = useCallback(() => setPlanRevision((n) => n + 1), []);
   // Helpers keep the same identity across renders: screens list them in effect dependencies, and
   // a new function on every state change re-ran those effects in a loop (the review screen called
   // adapt-plan repeatedly).
@@ -59,8 +64,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setReview,
       recent,
       setRecent,
+      planRevision,
+      bumpPlan,
     }),
-    [account, answers, plan, logs, review, recent, update, setPlanAndLogs, putLog],
+    [account, answers, plan, logs, review, recent, update, setPlanAndLogs, putLog, planRevision, bumpPlan],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -16,7 +16,7 @@ Several Claude sessions work on this project (claude.ai Project chats, Claude Co
 
 ## Layout
 - `packages/engine`: pure TypeScript training engine (no UI/DB). HYROX generator in `src/hyrox/`; tests in `test/` (vitest). `test/hyrox.test.ts` pins approved coaching rules: change those only with Cameron.
-- `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
+- `apps/mobile`: Expo SDK 57 app (Expo Router, `src/app`; signed-in screens are bottom tabs in `src/app/(tabs)`: Home, Training, Profile). Supabase backend when `.env.local` is set, otherwise a labelled demo mode.
 - `supabase/`: migrations with row-level security; `pnpm db:test` runs the isolation tests on a local Postgres. `functions/generate-plan` builds and saves plans (D-022) and `functions/adapt-plan` adapts them after each log (D-026), using the engine bundled by `pnpm functions:build`; shared request code in `functions/_shared/request.ts`.
 - `docs/`: release and TestFlight steps (`RELEASE.md`), decisions, HYROX week rules and variety formats, equipment catalog, onboarding, data model, security, Supabase setup.
 

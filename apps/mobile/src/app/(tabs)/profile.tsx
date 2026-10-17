@@ -1,18 +1,19 @@
 /**
- * Account menu: who's signed in, plan settings, subscription, data and sign-out.
+ * Profile: who's signed in, their race and level, plan settings, subscription, data and sign-out.
  * Items that don't exist yet are shown as "Soon" and can't be tapped, so nothing pretends to work.
  */
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
 import { Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { RaceHeader } from "@/components/plan";
 import { Screen } from "@/components/ui";
 import { backend } from "@/data";
 import { useSession } from "@/lib/session";
 import { color, font, radius, space, type } from "@/lib/theme";
 
-export default function AccountScreen() {
-  const { account, setAccount } = useSession();
+export default function ProfileScreen() {
+  const { account, setAccount, plan, answers } = useSession();
   const [exporting, setExporting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -36,14 +37,21 @@ export default function AccountScreen() {
   };
 
   return (
-    <Screen>
+    <Screen tab>
       <View style={st.top}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Back to plan" hitSlop={12} style={st.back}>
-          <Text style={st.backText}>{"‹"} Plan</Text>
-        </Pressable>
+        <View style={st.avatar}>
+          <Text style={st.initial}>{(account?.email ?? "A").slice(0, 1).toUpperCase()}</Text>
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={type.display} accessibilityRole="header">Profile</Text>
+          <Text style={type.data} numberOfLines={1}>{account?.email ?? "Not signed in"}</Text>
+        </View>
       </View>
-      <Text style={type.display} accessibilityRole="header">Account</Text>
-      <Text style={[type.data, { marginTop: space.xs, marginBottom: space.xl }]}>{account?.email ?? "Not signed in"}</Text>
+      {plan ? (
+        <View style={st.race}>
+          <RaceHeader plan={plan.plan} answers={answers} />
+        </View>
+      ) : null}
 
       <Section title="Training">
         <Row label="Edit my answers" detail="Race, level, schedule, equipment, limitations" onPress={() => router.push("/onboarding/race")} />
@@ -100,9 +108,10 @@ function Row({ label, detail, value, onPress, soon = false, danger = false }: { 
 }
 
 const st = StyleSheet.create({
-  top: { flexDirection: "row", marginBottom: space.lg },
-  back: { paddingVertical: space.xs },
-  backText: { fontFamily: font.medium, fontSize: 15, color: color.muted },
+  top: { flexDirection: "row", alignItems: "center", gap: space.lg, marginBottom: space.xl },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: color.accentSoft, alignItems: "center", justifyContent: "center" },
+  initial: { fontFamily: font.semibold, fontSize: 26, color: color.accent },
+  race: { backgroundColor: color.surface, borderRadius: radius.card, padding: 20, marginBottom: space.xl },
   group: { backgroundColor: color.surface, borderRadius: radius.row, overflow: "hidden" },
   row: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md, paddingHorizontal: space.lg, minHeight: 56, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: color.line },
   value: { fontFamily: font.medium, fontSize: 14, color: color.accent },

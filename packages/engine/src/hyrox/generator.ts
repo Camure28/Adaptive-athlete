@@ -72,6 +72,18 @@ export interface HyroxAthlete {
   /** Running benchmarks (5K, 10K, etc.) used for run paces. */
   runResults: RaceResult[];
   exclusions: string[];
+  /**
+   * The day the athlete chose to start (onboarding: today, tomorrow, next Monday or a date).
+   * Used only while it's today or later; once it has passed (a plan rebuilt after editing answers),
+   * the new version starts next Monday so the current week carries over (D-022).
+   */
+  planStartDate?: IsoDate;
+}
+
+/** The first day sessions may be scheduled: the chosen start date, else next Monday. */
+export function planStart(athlete: Pick<HyroxAthlete, "planStartDate">, today: IsoDate): IsoDate {
+  const nextMonday = addDays(startOfWeek(today), 7);
+  return athlete.planStartDate && athlete.planStartDate >= today ? athlete.planStartDate : nextMonday;
 }
 
 export class HyroxPlanError extends Error {}
@@ -118,7 +130,12 @@ export function generateHyroxPlan(
   };
 
   // ---- Calendar & phases --------------------------------------------------------------------
-  const firstMonday = addDays(startOfWeek(opts.today), 7);
+  // Weeks run Monday to Sunday. Starting mid-week makes week 1 a short week: only the days from
+  // the start date on are used, and its running volume shrinks to match (ENGINE ASSUMPTION).
+  const startDay = planStart(athlete, opts.today);
+  let firstMonday = startOfWeek(startDay);
+  // No training days left in the start week (e.g. starting on a Sunday): begin the following Monday.
+  if (!days.some((d) => addDays(firstMonday, d) >= startDay)) firstMonday = addDays(firstMonday, 7);
   const totalWeeks = Math.floor(daysBetween(firstMonday, startOfWeek(goal.date)) / 7) + 1;
   if (totalWeeks < 3) throw new HyroxPlanError("Race is too close to build a plan; at least 3 weeks are needed");
   if (totalWeeks < HYROX_MIN_WEEKS) {
@@ -162,17 +179,22 @@ export function generateHyroxPlan(
     if (fullSimWeeks.includes(i)) replaceWithSim(slots, "full_simulation");
     else if (halfSimWeeks.includes(i)) replaceWithSim(slots, "half_simulation");
 
-    const capacity = doubles ? days.length * 2 : days.length;
+    // A short first week only uses the training days on or after the start date.
+    const weekDays = i === 0 ? days.filter((d) => dateOf(d) >= startDay) : days;
+    const capacity = doubles ? weekDays.length * 2 : weekDays.length;
     const kept = slots.slice(0, Math.min(lvl.sessions.max, capacity));
     if (i === 0 && days.length < lvl.sessions.min && !doubles) {
       notes.push(`Your ${days.length} training days are fewer than the ${lvl.sessions.min}+ sessions typical at this level; lower-priority sessions are left out.`);
     }
 
-    const placed = placeWeek(kept, days, longDay, doubles, lvl.hardDays.max, raceWeek ? goal.date : null, dateOf, prevSunday);
+    const short = i === 0 && weekDays.length < days.length;
+    const placed = short && status !== "race_ready"
+      ? placeShortFirstWeek(kept, weekDays, longDay, status, dateOf)
+      : placeWeek(kept, weekDays, longDay, doubles, lvl.hardDays.max, raceWeek ? goal.date : null, dateOf, prevSunday);
     const sundayHard = placed.filter((p) => p.date === dateOf(6) && isHard(p.slot)).length;
     prevSunday = { hard: sundayHard > 0, doubleHard: sundayHard >= 2, double: placed.filter((p) => p.date === dateOf(6)).length >= 2 };
     const workouts: PlannedWorkout[] = [];
-    const runVolume = volumes[i]!;
+    const runVolume = i === 0 && weekDays.length < days.length ? volumes[i]! * (weekDays.length / days.length) : volumes[i]!;
 
     // Fixed-distance run content first (sessions with known run meters), then easy runs fill.
     let fixedRun = 0;
@@ -216,7 +238,7 @@ export function generateHyroxPlan(
       phase,
       isRecoveryWeek: recovery,
       targetRunMeters: Math.round(runVolume),
-      workouts: workouts.filter((w) => w.date > opts.today && w.date <= goal.date),
+      workouts: workouts.filter((w) => w.date >= startDay && w.date <= goal.date),
     });
   }
 
@@ -336,6 +358,33 @@ const PRIORITY: Record<Slot["kind"], number> = {
 const priorityOf = (s: Slot): number => PRIORITY[s.kind];
 
 const circDist = (a: number, b: number): number => Math.min(Math.abs(a - b), 7 - Math.abs(a - b));
+
+/**
+ * A short first week (the athlete started mid-week), approved by the product owner 2026-10-16:
+ * - Building up: easy runs and strength only.
+ * - Training consistently: the first session is easy, then at most one hard session.
+ * - Race-ready: not handled here; the week's key sessions are placed as usual (no back-to-back hard days).
+ * The long run stays on the long day when that day is in the short week.
+ */
+function placeShortFirstWeek(slots: Slot[], weekDays: Weekday[], longDay: Weekday, status: TrainingStatus, dateOf: (d: Weekday) => IsoDate): Placed[] {
+  const out: Placed[] = [];
+  const free = [...weekDays].sort((a, b) => a - b);
+  const take = (d: Weekday, slot: Slot) => {
+    out.push({ slot, date: dateOf(d) });
+    free.splice(free.indexOf(d), 1);
+  };
+  if (free.includes(longDay) && free.length > 1) take(longDay, { kind: "long_run" });
+  // The first day is always easy.
+  if (free.length) take(free[0]!, { kind: "easy_run" });
+  if (status === "consistent") {
+    const hard = slots.find((x) => isHard(x) && !isSim(x));
+    // The only hard session of the week, so it can't be back to back with another one this week.
+    if (hard && free.length) take(free[0]!, hard);
+  }
+  if (free.length) take(free[0]!, { kind: "strength" });
+  for (const d of [...free]) take(d, { kind: "easy_run" });
+  return out;
+}
 
 interface Placed {
   slot: Slot;

@@ -13,7 +13,7 @@ export default function OnboardingStep() {
   const { step: param } = useLocalSearchParams<{ step: string }>();
   const step: Step = (STEPS as readonly string[]).includes(param ?? "") ? (param as Step) : "race";
   const index = STEPS.indexOf(step);
-  const { answers, update, setAnswers } = useSession();
+  const { answers, update, setAnswers, bumpPlan } = useSession();
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState(0);
@@ -34,7 +34,10 @@ export default function OnboardingStep() {
       setStage(1);
       // A new plan version from the answers just saved (built on the server; D-022).
       await backend.buildPlan(today);
-      router.replace("/plan");
+      bumpPlan();
+      // Editing answers is pushed over the tabs; a first sign-up isn't. Either way, land on Home.
+      if (router.canDismiss()) router.dismissAll();
+      router.replace("/home");
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Your answers couldn't be saved. Try again.");
     } finally {

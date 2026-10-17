@@ -12,7 +12,7 @@ const ScrollTo = createContext<((field: View | TextInput | null) => void) | null
  * The page shrinks above the keyboard, and a focused field scrolls into view, so what you type is
  * never hidden. The footer button rides on top of the keyboard.
  */
-export function Screen({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+export function Screen({ children, footer, tab = false }: { children: ReactNode; footer?: ReactNode; tab?: boolean }) {
   const scroll = useRef<ScrollView>(null);
   const content = useRef<View>(null);
   const reveal = (field: View | TextInput | null) => {
@@ -24,7 +24,7 @@ export function Screen({ children, footer }: { children: ReactNode; footer?: Rea
     }, 250);
   };
   return (
-    <SafeAreaView style={s.page} edges={["top", "bottom"]}>
+    <SafeAreaView style={s.page} edges={tab ? ["top"] : ["top", "bottom"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         {backend.mode === "demo" ? (
           <View style={s.demo} accessibilityRole="alert">

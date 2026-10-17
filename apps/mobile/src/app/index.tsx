@@ -28,7 +28,7 @@ export default function Index() {
         if (saved) {
           setStage(2);
           setAnswers(saved);
-          router.replace("/plan");
+          router.replace("/home");
         } else router.replace("/onboarding/race");
       } catch (e) {
         if (live) setError(e instanceof Error ? e.message : "Something went wrong loading your account.");

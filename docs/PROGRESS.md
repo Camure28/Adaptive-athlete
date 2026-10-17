@@ -6,6 +6,11 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (step 8: Today screen and bottom tabs)
+- **Done (D-028):** bottom tab bar with Home (today first), Training (weeks and calendar) and Profile (the account menu plus race and level). New routes `app/(tabs)/` (`_layout.tsx` loads the plan for all tabs and draws the tab bar; `home.tsx`, `training.tsx`, `profile.tsx`). `app/plan.tsx` and `app/account.tsx` were removed, and their parts moved to `components/plan.tsx` (`RaceHeader`, `Countdown`, `StatGrid`, `Week`, `Session`, `SessionDetails`, `Calendar`). Tab icons are in `components/icons.tsx`, drawn with views. After editing answers, the session's `bumpPlan()` reloads the plan and onboarding returns to Home. All routes now point to `/home`. App only: reload, no rebuild.
+- **Checked:** web preview of Home (plan not started yet), Training and Profile. Home with a session today hasn't been seen yet; Cameron's plan starts Mon Oct 19.
+- **Open:** leaderboard: what to rank and who sees it (product owner to decide). Then the pre-tester checklist or HYROX logging detail.
+
 ## 2026-10-16 — claude.ai Project chat (time entry instructions)
 - **Done (Cameron's request):** every finish-time field in onboarding says how to type it and reads back what it understood. Covers the target time, past HYROX time, benchmark and splits.
   - **Labels:** each field now has one, such as "Finish time (h:mm:ss)" next to "Race date".

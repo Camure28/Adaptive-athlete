@@ -47,7 +47,7 @@ export default function WorkoutsScreen() {
       footer={
         <View style={{ gap: space.xs }}>
           <Button title="Log other workout" onPress={() => router.push({ pathname: "/log", params: { id: "new" } })} />
-          <Button kind="quiet" title="Back to my plan" onPress={() => (router.canGoBack() ? router.back() : router.replace("/plan"))} />
+          <Button kind="quiet" title="Back to my plan" onPress={() => (router.canGoBack() ? router.back() : router.replace("/home"))} />
         </View>
       }
     >

@@ -159,3 +159,13 @@ Each entry: date, decision, reason, status. Decided by the product owner (Camero
 **Why:** The product owner found the cockpit style robotic and cluttered and wanted a smoother, less busy feel. Supersedes the visual part of D-020 (colours, fonts, loaders); D-020's dashboard content stays.
 **Status:** Built 2026-10-16 (claude.ai Project chat), app only; awaiting the product owner's review on the phone.
 
+## D-028 — Bottom tabs: Home, Training, Profile (2026-10-16)
+**Decision:** The signed-in app uses a bottom tab bar, as social and fitness apps do:
+- **Home** opens on today: today's session with a one-tap Log button and "See the workout", or a rest-day / plan-starts card with what's next. Below that: this week as a strip of days (session dots, a tick once logged, today highlighted), the countdown ring with the week's figures, Recent workouts / Log other workout, the review button and plan notes.
+- **Training** has the whole plan as weeks or a calendar, opening on the current week.
+- **Profile** has the account menu (formerly a separate screen), with the race, level, division and status at the top.
+
+Logging, the review, recent workouts and onboarding open over the tabs. The plan loads once for all tabs and reloads after the answers are edited.
+**Leaderboard:** requested as a "maybe" by the product owner. Not built yet, because it means showing one athlete's data to others (consent, privacy, what is ranked); options to be decided first.
+**Status:** Accepted (product owner 2026-10-16); built the same day, awaiting his phone check. The tab icons are drawn in code (no icon package).
+

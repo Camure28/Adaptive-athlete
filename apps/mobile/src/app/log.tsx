@@ -34,7 +34,7 @@ export default function LogScreen() {
 
   if ((!workout && !other) || !form) {
     return (
-      <Screen footer={<Button title="Back to my plan" onPress={() => router.replace("/plan")} />}>
+      <Screen footer={<Button title="Back to my plan" onPress={() => router.replace("/home")} />}>
         <Heading title="Session not found" detail="Open the session from your plan to log it." />
       </Screen>
     );
