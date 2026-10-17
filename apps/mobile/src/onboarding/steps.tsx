@@ -16,6 +16,8 @@ import {
   readTime,
   LIMITATION_LABELS,
   LIMITATIONS,
+  startOptions,
+  startQuestionApplies,
   suggestStatusFromPastRace,
   type BenchmarkDistance,
   type Division,
@@ -395,6 +397,7 @@ function Limitations({ a, update, errors }: StepProps) {
 }
 
 function Review({ a, update, errors }: StepProps) {
+  const today = localToday();
   const rows: [string, string][] = [
     ["Race", a.eventLabel ? `${a.eventLabel}, ${a.raceDate}` : a.raceDate],
     ["Division", DIVISIONS.find((d) => d.value === a.division)?.label ?? ""],
@@ -416,6 +419,13 @@ function Review({ a, update, errors }: StepProps) {
           </View>
         ))}
       </View>
+      {startQuestionApplies(a, today) ? (
+        <Question label="When do you want to start?" error={errors.planStartDate}>
+          {startOptions(today).map((o) => (
+            <Choice key={o.date} label={o.label} detail={o.detail} selected={a.planStartDate === o.date} onPress={() => update({ planStartDate: o.date })} />
+          ))}
+        </Question>
+      ) : null}
       <Question label="Your data" error={errors.consentHealthData}>
         <Choice
           multi

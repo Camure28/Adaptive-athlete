@@ -23,7 +23,7 @@ const base: OnboardingAnswers = {
   consentHealthData: true,
 };
 
-/** What save_hyrox_onboarding stores for this payload (supabase/migrations/20261016000005_hyrox_events.sql). */
+/** What save_hyrox_onboarding stores for this payload (supabase/migrations/20261017000011_plan_start_date.sql). */
 function storedRows(a: OnboardingAnswers): StoredProfile {
   const p = toSavePayload(a, TODAY);
   const limitations = p.limitations.length === 0 && p.limitationNote ? ["other"] : [...p.limitations];
@@ -38,6 +38,7 @@ function storedRows(a: OnboardingAnswers): StoredProfile {
       max_weekend_minutes: p.weekendMinutes,
       weekly_run_meters: p.weeklyRunMeters,
       training_status: p.trainingStatus,
+      plan_start_date: p.planStartDate,
     },
     equipment: p.equipment,
     limitations,
@@ -53,6 +54,8 @@ const CASES: [string, Partial<OnboardingAnswers>][] = [
   ["advanced with doubles, time goal, limitations", { level: "advanced", wantsDoubles: true, goal: "time", targetTime: "1:25:00", limitations: ["jumping", "overhead"], division: "men_pro" }],
   ["competitive, no benchmark, km, race-ready", { level: "competitive", wantsDoubles: false, benchmarkDistance: null, units: "km", weeklyRun: "55", trainingStatus: "race_ready", longDay: null }],
   ["intermediate with only a limitation note", { level: "intermediate", limitationNote: "Sore shoulder", trainingStatus: null }],
+  ["starting today", { planStartDate: TODAY }],
+  ["starting next Monday, chosen explicitly", { planStartDate: "2026-10-19" }],
 ];
 
 describe("phone and server build the same engine inputs", () => {

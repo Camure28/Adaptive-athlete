@@ -7,6 +7,8 @@ import {
   parseUsDate,
   toEngineInputs,
   toSavePayload,
+  startOptions,
+  startQuestionApplies,
   suggestStatusFromPastRace,
   validateAll,
   validateStep,
@@ -27,6 +29,7 @@ const complete: OnboardingAnswers = {
   benchmarkDate: "09/20/2026",
   days: [0, 2, 3, 5],
   longDay: 5,
+  planStartDate: TODAY,
   consentHealthData: true,
 };
 
@@ -137,5 +140,25 @@ describe("race picker and past result splits", () => {
     const some = toSavePayload({ ...withPast, pastRunSplits: runs, pastStationSplits: { skierg: "4:30" } }, TODAY).results.find((r) => r.kind === "hyrox");
     expect(some?.splits).toEqual({ runs: [275, 290, null, null, null, null, null, null], stations: { skierg: 270 } });
     expect(validateStep("experience", { ...withPast, pastRunSplits: ["4.35", "", "", "", "", "", "", ""] }, TODAY).pastSplits).toBeDefined();
+  });
+});
+
+describe("plan start day", () => {
+  it("offers today, tomorrow and next Monday mid-week", () => {
+    const o = startOptions("2026-10-15"); // Thursday
+    expect(o.map((x) => [x.label, x.date])).toEqual([["Today", "2026-10-15"], ["Tomorrow", "2026-10-16"], ["Next Monday", "2026-10-19"]]);
+  });
+  it("merges tomorrow and next Monday on a Sunday", () => {
+    const o = startOptions("2026-10-18");
+    expect(o.map((x) => x.label)).toEqual(["Today", "Tomorrow, Monday"]);
+    expect(o[1]!.date).toBe("2026-10-19");
+  });
+  it("is required at first onboarding and no longer asked once the plan has started", () => {
+    const a = { ...EMPTY_ANSWERS };
+    expect(startQuestionApplies(a, "2026-10-15")).toBe(true);
+    expect(validateStep("review", a, "2026-10-15").planStartDate).toBeDefined();
+    expect(validateStep("review", { ...a, planStartDate: "2026-10-15" }, "2026-10-15").planStartDate).toBeUndefined();
+    expect(startQuestionApplies({ planStartDate: "2026-10-12" }, "2026-10-15")).toBe(false);
+    expect(validateStep("review", { ...a, planStartDate: "2026-10-12" }, "2026-10-15").planStartDate).toBeUndefined();
   });
 });

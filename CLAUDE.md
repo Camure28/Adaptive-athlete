@@ -55,4 +55,5 @@ pnpm functions:deploy                      # rebuild the engine bundle, deploy g
 - Live 2026-10-16: workout logging including workouts outside the plan (D-025) and server-side adaptation with the weekly review (D-026); phone test pending (first session Mon Oct 19).
 - Built 2026-10-16: account deletion, privacy policy and feedback in Profile (D-031); deletion migration push pending.
 - Name and icon 2026-10-16: athletes see **Adapt** (D-032); code, repo and bundle ID keep "adaptive-athlete".
-- Next (order in `docs/ROADMAP.md`): pilot readiness (coach review, TestFlight), then HYROX station tracking, Apple Health.
+- Built 2026-10-16: plan start day at onboarding (D-033); migration push and functions deploy pending. Coach review page sent to Cameron (answers in the artifact's database, see PROGRESS).
+- Next (order in `docs/ROADMAP.md`): pilot readiness (coach review answers, TestFlight), then HYROX station tracking, Apple Health.

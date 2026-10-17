@@ -10,7 +10,7 @@ Status: approved by product owner 2026-10-15. Target: 3–4 minutes.
 | 4 | Your schedule | Training days · Day for the longest session · Minutes available weekdays / weekends · Advanced only: "Do you want double days?" | Training days | Session placement; session length caps |
 | 5 | Your equipment | Where you train: Home / CrossFit / Commercial / HYROX club (any combination) → pre-ticked checklist to correct | Yes | Station or substitute used in each block |
 | 6 | Limitations | Movements to avoid (jumping, running downhill, deep knee bends, …) · Optional note | No | Removes those exercises |
-| 7 | Review | Summary, then "Here's why your plan looks like this" | — | — |
+| 7 | Review | Summary; "When do you want to start?" (Today / Tomorrow / Next Monday, D-033); consent | Start day required at first onboarding | Not asked again once the start day has passed |
 
 Wearable connections are not part of onboarding; athletes add them from settings once integrations exist.
 

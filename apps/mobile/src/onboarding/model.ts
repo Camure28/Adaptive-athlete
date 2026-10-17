@@ -18,7 +18,10 @@ import {
   type RaceResult,
   type TrainingStatus,
   type Weekday,
+  addDays,
   daysBetween,
+  startOfWeek,
+  weekdayOf,
 } from "@adaptive-athlete/engine";
 
 export type Division = "women_open" | "women_pro" | "men_open" | "men_pro";
@@ -63,6 +66,8 @@ export interface OnboardingAnswers {
   limitations: Limitation[];
   limitationNote: string;
   // 7. Review
+  /** The day the plan starts (ISO), chosen on the review step; null = not chosen yet. */
+  planStartDate: string | null;
   consentHealthData: boolean;
 }
 
@@ -93,6 +98,7 @@ export const EMPTY_ANSWERS: OnboardingAnswers = {
   equipment: [],
   limitations: [],
   limitationNote: "",
+  planStartDate: null,
   consentHealthData: false,
 };
 
@@ -205,6 +211,7 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
       if (a.limitationNote.length > 280) e.limitationNote = "Keep the note under 280 characters.";
       break;
     case "review":
+      if (startQuestionApplies(a, today) && !startOptions(today).some((o) => o.date === a.planStartDate)) e.planStartDate = "Choose when you want to start.";
       if (!a.consentHealthData) e.consentHealthData = "We need your agreement to use your training data to build your plan.";
       break;
   }
@@ -213,6 +220,34 @@ export function validateStep(step: Step, a: OnboardingAnswers, today: string): E
 
 export function validateAll(a: OnboardingAnswers, today: string): Errors {
   return Object.assign({}, ...STEPS.map((s) => validateStep(s, a, today)));
+}
+
+// ---- Plan start day ----------------------------------------------------------------------------
+
+const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/**
+ * Start-day choices: today, tomorrow and next Monday (merged when they fall on the same day).
+ * Starting mid-week gives a short first week built from the remaining training days.
+ */
+export function startOptions(today: string): { date: string; label: string; detail: string }[] {
+  const tomorrow = addDays(today, 1);
+  const nextMonday = addDays(startOfWeek(today), 7);
+  const name = (d: string) => WEEKDAY_NAMES[weekdayOf(d)]!;
+  const out = [
+    { date: today, label: "Today", detail: `${name(today)}. A short first week from your remaining training days.` },
+    { date: tomorrow, label: tomorrow === nextMonday ? "Tomorrow, Monday" : "Tomorrow", detail: tomorrow === nextMonday ? "A full first week." : `${name(tomorrow)}. A short first week from your remaining training days.` },
+  ];
+  if (nextMonday !== tomorrow) out.push({ date: nextMonday, label: "Next Monday", detail: "A full first week." });
+  return out;
+}
+
+/**
+ * The question is asked until the plan has started. Once the chosen day has passed (editing answers
+ * later), it isn't asked again: a rebuilt plan keeps this week and changes from next Monday (D-022).
+ */
+export function startQuestionApplies(a: Pick<OnboardingAnswers, "planStartDate">, today: string): boolean {
+  return a.planStartDate === null || a.planStartDate >= today;
 }
 
 // ---- Derived state ----------------------------------------------------------------------------
@@ -261,6 +296,7 @@ export function toEngineInputs(a: OnboardingAnswers, today: string, athleteId = 
   if (a.longDay !== null) athlete.preferredLongDay = a.longDay;
   if (a.level === "advanced" && a.wantsDoubles !== null) athlete.wantsDoubles = a.wantsDoubles;
   if (a.trainingStatus) athlete.trainingStatus = a.trainingStatus;
+  if (a.planStartDate) athlete.planStartDate = a.planStartDate;
 
   const goal: HyroxGoal = {
     id: "goal",
@@ -302,6 +338,7 @@ export function toSavePayload(a: OnboardingAnswers, today: string) {
     level: athlete.level,
     wantsDoubles: athlete.wantsDoubles ?? null,
     trainingStatus: a.trainingStatus,
+    planStartDate: a.planStartDate,
     gymTypes: a.gymTypes,
     availableDays: athlete.availableDays,
     longDay: a.longDay,

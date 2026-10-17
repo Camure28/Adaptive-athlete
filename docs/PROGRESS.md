@@ -6,6 +6,12 @@ Format: date, where the work happened, what changed, what's open. Decisions go i
 
 ---
 
+## 2026-10-16 — claude.ai Project chat (start day and coach review)
+- **Done (D-033):** onboarding's review step asks when to start (Today / Tomorrow / Next Monday). It's saved as `plan_start_date` (migration `20261017000011_plan_start_date.sql`, 3 database checks in `plan_start_test.sql`), sent to the engine on the phone and the server, and not asked again once the day has passed. This closes the daily review's "half-landed plan start date" issue.
+- **Coach review page:** a private artifact listing the 25 coaching defaults still awaiting Cameron's sign-off: session formats (D-016), strength, HYROX_WEEK engine assumptions, the 2-week base (D-018), the mid-week start, body areas and pain wording (D-025), answer options (D-026), and the A-2/A-3/P-7 details. Answers save to the page's database (collection `answers`, one document per item: verdict, note); Claude reads them with ArtifactData. Link: https://claude.ai/artifact/Tvb6KZuJKY3LxM2eHB9jRc
+- **Checked:** `pnpm db:test` (4 suites), typecheck, lint, 265 engine and 44 app tests; web preview of onboarding with "Today" (Friday start → first session Saturday).
+- **Open (Cameron):** `npx supabase db push --dry-run` then `db push` (now 3 migrations if the first two aren't pushed yet); `pnpm functions:deploy`; native rebuild for the name and icon; fill in the coach review, then tell Claude "coach review done".
+
 ## 2026-10-16 — claude.ai Project chat (name and icon)
 - **Done (D-032):** the app is now **Adapt** with the A icon. Changed: `app.json` name and Android icon background; new `assets/icon.png`, Android foreground, background and monochrome, favicon and `splash-icon.png`; the name everywhere athletes see it, including `docs/PRIVACY_POLICY.md`. Internal names (bundle ID, scheme, repo) unchanged.
 - **Brainstormed:** about 20 names. Ruled out after quick searches: Kilo, Calibr8, Dialed, Splitline, AdaptFit (an "AdaptFit" app already exists).

@@ -286,6 +286,7 @@ export class SupabaseBackend implements Backend {
       eventId: goal.data.hyrox_event_id ?? null,
       level: profile.data.level as HyroxLevel,
       trainingStatus: (profile.data.training_status ?? null) as TrainingStatus | null,
+      planStartDate: (profile.data.plan_start_date ?? null) as string | null,
       pastHyroxTime: hyrox ? hms(hyrox.finish_seconds) : "",
       pastHyroxDate: hyrox ? usDate(hyrox.event_date) : "",
       ...splitsFrom(hyrox?.splits),
